@@ -8,6 +8,7 @@ import { PersonalizedInsights } from "@/components/dashboard/personalized-insigh
 import { YieldDashboard } from "@/components/dashboard/yield-dashboard"
 import { HarvestForecast } from "@/components/dashboard/harvest-forecast"
 import { EnhancedGreeting } from "@/components/dashboard/enhanced-greeting"
+import { KnowledgeLinkCard } from "@/components/dashboard/knowledge-link-card"
 
 export default function Dashboard() {
   // Filter tasks that are pending or in progress
@@ -81,6 +82,7 @@ export default function Dashboard() {
         <div className="space-y-4">
           <FarmHealthStatus farms={farms} />
           <TeamOverview users={users} />
+          <KnowledgeLinkCard />
         </div>
       </div>
     </div>

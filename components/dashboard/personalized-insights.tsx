@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AlertTriangle, Calendar, Droplets, Sun, Thermometer } from "lucide-react"
+import { HealthReportsModal } from "@/components/modals/health-reports-modal"
 
 export function PersonalizedInsights() {
   return (
@@ -43,9 +44,13 @@ export function PersonalizedInsights() {
           <div>
             <h4 className="text-sm font-medium">Urgent Tasks</h4>
             <p className="text-xs text-muted-foreground">2 high-priority tasks due today</p>
-            <Button variant="link" size="sm" className="h-auto p-0 text-xs">
-              View urgent tasks
-            </Button>
+            <HealthReportsModal
+              trigger={
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs">
+                  Health Report
+                </Button>
+              }
+            />
           </div>
         </div>
 

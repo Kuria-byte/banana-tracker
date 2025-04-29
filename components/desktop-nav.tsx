@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Map, Calendar, Leaf, BarChart3, Menu } from "lucide-react"
+import { Home, Map, Calendar, Leaf, BarChart3, Menu, Users, Book } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -14,6 +14,8 @@ const navItems = [
   { name: "Tasks", href: "/tasks", icon: Calendar },
   { name: "Growth", href: "/growth", icon: Leaf },
   { name: "Reports", href: "/reports", icon: BarChart3 },
+  { name: "Knowledge", href: "/knowledge", icon: Book },
+  { name: "Team", href: "/team", icon: Users },
 ]
 
 export function DesktopNav() {

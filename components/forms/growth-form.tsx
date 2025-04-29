@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import {useForm} from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react"
 import { format } from "date-fns"
@@ -54,7 +54,7 @@ export function GrowthForm({ onSubmit }: GrowthFormProps) {
                     <SelectValue placeholder="Select a farm" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                <SelectContent className="z-[60]">
                   {farms.map((farm) => (
                     <SelectItem key={farm.id} value={farm.id}>
                       {farm.name}
@@ -79,7 +79,7 @@ export function GrowthForm({ onSubmit }: GrowthFormProps) {
                     <SelectValue placeholder="Select a plot" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                <SelectContent className="z-[60]">
                   {plots.map((plot) => (
                     <SelectItem key={plot.id} value={plot.id}>
                       {plot.name}
@@ -104,7 +104,7 @@ export function GrowthForm({ onSubmit }: GrowthFormProps) {
                     <SelectValue placeholder="Select a growth stage" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                <SelectContent className="z-[60]">
                   {growthStages.map((stage) => (
                     <SelectItem key={stage.id} value={stage.id}>
                       {stage.name}
@@ -135,7 +135,7 @@ export function GrowthForm({ onSubmit }: GrowthFormProps) {
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0 z-[60]" align="start">
                   <Calendar
                     mode="single"
                     selected={field.value}
@@ -223,7 +223,7 @@ export function GrowthForm({ onSubmit }: GrowthFormProps) {
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[200px] p-0">
+                    <PopoverContent className="w-[200px] p-0 z-[60]">
                       <Command>
                         <CommandInput placeholder="Search worker..." />
                         <CommandList>
