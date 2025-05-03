@@ -4,13 +4,32 @@ import { Leaf, Map, Calendar, AlertTriangle } from "lucide-react"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { TaskList } from "@/components/dashboard/task-list"
 import { FarmHealthStatus } from "@/components/dashboard/farm-health-status"
-import { farms, tasks, users } from "@/lib/mock-data"
 import { TeamOverview } from "@/components/dashboard/team-overview"
 import { PersonalizedInsights } from "@/components/dashboard/personalized-insights"
 import { YieldDashboard } from "@/components/dashboard/yield-dashboard"
 import { HarvestForecast } from "@/components/dashboard/harvest-forecast"
 import { EnhancedGreeting } from "@/components/dashboard/enhanced-greeting"
 import { KnowledgeLinkCard } from "@/components/dashboard/knowledge-link-card"
+import { getAllFarms } from "@/db/repositories/farm-repository";
+import { getAllTasks } from "@/db/repositories/task-repository"
+
+function mapHealthStatus(status: string) {
+  switch (status) {
+    case "GOOD": return "Good";
+    case "AVERAGE": return "Average";
+    case "POOR": return "Poor";
+    default: return status;
+  }
+}
+
+function mapTaskStatus(status: string) {
+  switch (status) {
+    case "PENDING": return "Pending";
+    case "IN_PROGRESS": return "In Progress";
+    case "COMPLETED": return "Completed";
+    default: return status;
+  }
+}
 
 export default async function Dashboard() {
   // Server-side authentication check
@@ -19,8 +38,18 @@ export default async function Dashboard() {
     redirect("/handler/sign-up"); 
   }
 
-  // Filter tasks that are pending or in progress
-  const activeTasks = tasks.filter((task) => task.status === "Pending" || task.status === "In Progress")
+  const farms = await getAllFarms();
+
+  const farmsWithMappedStatus = farms.map(farm => ({
+    ...farm,
+    healthStatus: mapHealthStatus(farm.healthStatus) as "Good" | "Average" | "Poor"
+  }));
+
+ 
+  const tasks = (await getAllTasks()).map(task => ({
+    ...task,
+    status: mapTaskStatus(task.status) as "Pending" | "In Progress" | "Completed" | "Cancelled"
+  }));
 
   // Count farms by location
   const locationCounts = farms.reduce(
@@ -66,7 +95,7 @@ export default async function Dashboard() {
         />
         <StatsCard
           title="Active Tasks"
-          value={activeTasks.length}
+          value={tasks.filter(task => task.status === "Pending" || task.status === "In Progress").length}
           icon={<Calendar className="h-4 w-4 text-muted-foreground" />}
           description="Pending or in progress"
         />
@@ -85,10 +114,10 @@ export default async function Dashboard() {
             <YieldDashboard />
             <HarvestForecast />
           </div>
-          <TaskList tasks={activeTasks} limit={5} />
+          <TaskList tasks={tasks} limit={5} />
         </div>
         <div className="space-y-4">
-          <FarmHealthStatus farms={farms} />
+          <FarmHealthStatus farms={farmsWithMappedStatus} />
           <TeamOverview  />
           <KnowledgeLinkCard />
         </div>

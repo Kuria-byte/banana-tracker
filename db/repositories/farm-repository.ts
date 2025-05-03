@@ -149,9 +149,9 @@ function farmDbToModel(dbFarm: any): Farm {
     id: dbFarm.id.toString(),
     name: dbFarm.name,
     location: dbFarm.location,
-    area: Number.parseFloat(dbFarm.area),
+    area: dbFarm.size !== undefined && dbFarm.size !== null && !isNaN(Number(dbFarm.size)) ? Number(dbFarm.size) : 0,
     plotCount: dbFarm.plotCount,
-    dateEstablished: dbFarm.dateEstablished.toISOString(),
+    dateEstablished: dbFarm.dateEstablished ? dbFarm.dateEstablished.toISOString() : "",
     healthStatus: dbFarm.healthStatus,
     teamLeaderId: dbFarm.teamLeaderId ? dbFarm.teamLeaderId.toString() : "",
   }

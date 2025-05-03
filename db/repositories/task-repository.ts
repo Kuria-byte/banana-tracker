@@ -36,7 +36,7 @@ export async function getTasksByFarmId(farmId: number): Promise<Task[]> {
 
 export async function getTasksByAssignedToId(userId: number): Promise<Task[]> {
   try {
-    const result = await db.select().from(tasks).where(eq(tasks.assignedToId, userId))
+    const result = await db.select().from(tasks).where(eq(tasks.assigneeId, userId))
     return result.map(taskDbToModel)
   } catch (error) {
     console.error(`Error fetching tasks assigned to user with id ${userId}:`, error)
@@ -62,14 +62,14 @@ export async function createTask(values: TaskFormValues): Promise<Task> {
     const taskData = {
       title: values.title,
       description: values.description,
-      assignedToId: Number.parseInt(values.assignedToId),
+      assigneeId: Number.parseInt(values.assignedToId),
       farmId: Number.parseInt(values.farmId),
       plotId: values.plotId ? Number.parseInt(values.plotId) : null,
       rowId: values.rowId ? Number.parseInt(values.rowId) : null,
       dueDate: values.dueDate,
-      priority: values.priority,
-      type: values.type,
-      status: "Pending",
+      priority: mapTaskPriorityToDb(values.priority),
+      type: mapTaskTypeToDb(values.type),
+      status: "PENDING" as const,
       dateCreated: new Date(),
     }
 
@@ -86,14 +86,14 @@ export async function updateTask(id: number, values: TaskFormValues & { status?:
     const taskData = {
       title: values.title,
       description: values.description,
-      assignedToId: Number.parseInt(values.assignedToId),
+      assigneeId: Number.parseInt(values.assignedToId),
       farmId: Number.parseInt(values.farmId),
       plotId: values.plotId ? Number.parseInt(values.plotId) : null,
       rowId: values.rowId ? Number.parseInt(values.rowId) : null,
       dueDate: values.dueDate,
-      priority: values.priority,
-      type: values.type,
-      status: values.status || undefined,
+      priority: mapTaskPriorityToDb(values.priority),
+      type: mapTaskTypeToDb(values.type),
+      status: values.status ? mapTaskStatusToDb(values.status) : undefined,
       updatedAt: new Date(),
     }
 
@@ -138,17 +138,48 @@ export async function deleteTask(id: number): Promise<boolean> {
 // Helper function to convert database task to model task
 function taskDbToModel(dbTask: any): Task {
   return {
-    id: dbTask.id.toString(),
+    id: dbTask.id?.toString() ?? "",
     title: dbTask.title,
     description: dbTask.description,
-    assignedToId: dbTask.assignedToId.toString(),
-    farmId: dbTask.farmId.toString(),
+    assignedToId: dbTask.assigneeId?.toString() ?? "",
+    farmId: dbTask.farmId?.toString() ?? "",
     plotId: dbTask.plotId ? dbTask.plotId.toString() : undefined,
     rowId: dbTask.rowId ? dbTask.rowId.toString() : undefined,
-    dueDate: dbTask.dueDate.toISOString(),
-    status: dbTask.status,
+    dueDate: dbTask.dueDate ? dbTask.dueDate.toISOString() : "",
+    status: mapTaskStatusFromDb(dbTask.status),
     priority: dbTask.priority,
     type: dbTask.type,
-    dateCreated: dbTask.dateCreated.toISOString(),
+    dateCreated: dbTask.dateCreated ? dbTask.dateCreated.toISOString() : undefined,
   }
+}
+
+function mapTaskStatusToDb(status: string): "PENDING" | "IN_PROGRESS" | "COMPLETED" | undefined {
+  switch (status) {
+    case "Pending": return "PENDING"
+    case "In Progress": return "IN_PROGRESS"
+    case "Completed": return "COMPLETED"
+    default: return undefined
+  }
+}
+
+function mapTaskStatusFromDb(status: string): "Pending" | "In Progress" | "Completed" | "Cancelled" {
+  switch (status) {
+    case "PENDING": return "Pending"
+    case "IN_PROGRESS": return "In Progress"
+    case "COMPLETED": return "Completed"
+    default: return status as any
+  }
+}
+
+function mapTaskPriorityToDb(priority: string): "LOW" | "MEDIUM" | "HIGH" {
+  switch (priority) {
+    case "Low": return "LOW"
+    case "Medium": return "MEDIUM"
+    case "High": return "HIGH"
+    default: return "MEDIUM"
+  }
+}
+
+function mapTaskTypeToDb(type: string): "Planting" | "Harvesting" | "Maintenance" | "Input Application" | "Inspection" {
+  return type as any
 }
