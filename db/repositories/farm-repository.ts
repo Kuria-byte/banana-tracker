@@ -154,6 +154,7 @@ function farmDbToModel(dbFarm: any): Farm {
     dateEstablished: dbFarm.dateEstablished ? dbFarm.dateEstablished.toISOString() : "",
     healthStatus: dbFarm.healthStatus,
     teamLeaderId: dbFarm.teamLeaderId ? dbFarm.teamLeaderId.toString() : "",
+    group_code: dbFarm.group_code || "",
   }
 }
 

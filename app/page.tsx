@@ -12,6 +12,8 @@ import { EnhancedGreeting } from "@/components/dashboard/enhanced-greeting"
 import { KnowledgeLinkCard } from "@/components/dashboard/knowledge-link-card"
 import { getAllFarms } from "@/db/repositories/farm-repository";
 import { getAllTasks } from "@/db/repositories/task-repository"
+import { getAllUsers } from "@/db/repositories/user-repository";
+import { getAllHarvests } from "@/db/repositories/harvest-repository";
 
 function mapHealthStatus(status: string) {
   switch (status) {
@@ -39,6 +41,8 @@ export default async function Dashboard() {
   }
 
   const farms = await getAllFarms();
+  const users = await getAllUsers();
+  const harvests = await getAllHarvests();
 
   const farmsWithMappedStatus = farms.map(farm => ({
     ...farm,
@@ -111,14 +115,14 @@ export default async function Dashboard() {
         <div className="md:col-span-2 space-y-4">
           <PersonalizedInsights />
           <div className="grid gap-4 md:grid-cols-2">
-            <YieldDashboard />
+            <YieldDashboard harvests={harvests} />
             <HarvestForecast />
           </div>
           <TaskList tasks={tasks} limit={5} />
         </div>
         <div className="space-y-4">
           <FarmHealthStatus farms={farmsWithMappedStatus} />
-          <TeamOverview  />
+          <TeamOverview users={users.slice(0, 5)} />
           <KnowledgeLinkCard />
         </div>
       </div>

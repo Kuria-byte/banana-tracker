@@ -1,11 +1,13 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { calculateTotalYield, harvests } from "@/lib/mock-data"
 import { BarChart3 } from "lucide-react"
+import type { Harvest } from "@/db/repositories/harvest-repository"
 
-export function YieldDashboard() {
-  const totalYield = calculateTotalYield()
+export function YieldDashboard({ harvests }: { harvests: Harvest[] }) {
+  // Calculate total yield
+  const totalWeight = harvests.reduce((sum, h) => sum + (h.totalWeight || 0), 0)
+  const bunchCount = harvests.reduce((sum, h) => sum + (h.bunchCount || 0), 0)
 
   // Calculate monthly yield data for the chart
   const monthlyData = harvests.reduce((acc: any[], harvest) => {
@@ -40,9 +42,9 @@ export function YieldDashboard() {
         <BarChart3 className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{totalYield.totalWeight.toLocaleString()} kg</div>
+        <div className="text-2xl font-bold">{totalWeight.toLocaleString()} kg</div>
         <p className="text-xs text-muted-foreground">
-          From {totalYield.bunchCount.toLocaleString()} bunches harvested this year
+          From {bunchCount.toLocaleString()} bunches harvested this year
         </p>
 
         <div className="mt-4 space-y-2">
@@ -68,7 +70,7 @@ export function YieldDashboard() {
           <div>Monthly yield (kg)</div>
           <div className="flex items-center">
             <div className="mr-1 h-2 w-2 rounded-full bg-green-500"></div>
-            <span>2023</span>
+            <span>{new Date().getFullYear()}</span>
           </div>
         </div>
       </CardContent>

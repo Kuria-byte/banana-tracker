@@ -1,15 +1,16 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { type Farm, formatDate } from "@/lib/mock-data"
 import { Badge } from "@/components/ui/badge"
 import { MapPin } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
 interface FarmCardProps {
-  farm: Farm
+  farm: any
+  establishedDate: string
+  holes: number
 }
 
-export function FarmCard({ farm }: FarmCardProps) {
+export function FarmCard({ farm, establishedDate, holes }: FarmCardProps) {
   const getHealthStatusColor = () => {
     switch (farm.healthStatus) {
       case "Good":
@@ -44,12 +45,16 @@ export function FarmCard({ farm }: FarmCardProps) {
             <p className="font-medium">{farm.area} acres</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Plots</p>
-            <p className="font-medium">{farm.plotCount}</p>
+            <p className="text-muted-foreground">Group</p>
+            <p className="font-medium">{farm.group_code || "N/A"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Holes</p>
+            <p className="font-medium">{holes}</p>
           </div>
           <div className="col-span-2">
             <p className="text-muted-foreground">Established</p>
-            <p className="font-medium">{formatDate(farm.dateEstablished)}</p>
+            <p className="font-medium">{establishedDate}</p>
           </div>
         </div>
       </CardContent>

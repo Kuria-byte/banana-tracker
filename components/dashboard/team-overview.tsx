@@ -3,9 +3,9 @@
 import Link from "next/link"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { users } from "@/lib/mock-data"
+import type { User } from "@/lib/mock-data"
 
-export function TeamOverview() {
+export function TeamOverview({ users }: { users: User[] }) {
   // Get the first 5 team members
   const teamMembers = users.slice(0, 5)
 
@@ -34,7 +34,7 @@ export function TeamOverview() {
                   </Avatar>
                   <div>
                     <p className="text-sm font-medium">{member.name}</p>
-                    <p className="text-xs text-muted-foreground">{member.role}</p>
+                    <p className="text-xs text-muted-foreground">{member.phone}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">

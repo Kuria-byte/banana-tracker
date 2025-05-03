@@ -22,6 +22,7 @@ export interface Farm {
   dateEstablished: string
   healthStatus: "Good" | "Average" | "Poor"
   teamLeaderId: string
+  group_code?: string // Optional group code for farms
 }
 
 // Plot interface
@@ -34,6 +35,7 @@ export interface Plot {
   dateEstablished: string
   rowCount: number
   healthStatus: "Good" | "Average" | "Poor"
+  holes?: number // Optional holes property
 }
 
 // Row interface

@@ -39,10 +39,11 @@ export async function createPlot(values: PlotFormValues): Promise<Plot> {
     const plotData = {
       farmId: Number.parseInt(values.farmId),
       name: values.name,
-      area: values.area,
+      area: values.area.toString(),
       soilType: values.soilType,
-      dateEstablished: values.dateEstablished,
+      plantedDate: (values as any).plantedDate ?? values.dateEstablished,
       healthStatus: values.healthStatus,
+      holes: (values as any).holes ?? 0,
       rowCount: 0,
     }
 
@@ -62,10 +63,11 @@ export async function updatePlot(id: number, values: PlotFormValues): Promise<Pl
   try {
     const plotData = {
       name: values.name,
-      area: values.area,
+      area: values.area.toString(),
       soilType: values.soilType,
-      dateEstablished: values.dateEstablished,
+      plantedDate: (values as any).plantedDate ?? values.dateEstablished,
       healthStatus: values.healthStatus,
+      holes: (values as any).holes ?? 0,
       updatedAt: new Date(),
     }
 
@@ -102,10 +104,11 @@ export async function deletePlot(id: number): Promise<boolean> {
 async function updateFarmPlotCount(farmId: number): Promise<void> {
   try {
     // Count the plots for this farm
-    const plotCount = await db.select({ count: db.fn.count() }).from(plots).where(eq(plots.farmId, farmId))
+    const result = await db.select().from(plots).where(eq(plots.farmId, farmId))
+    const plotCount = result.length
 
     // Update the farm's plot count
-    await db.execute(`UPDATE farms SET plot_count = ${plotCount[0].count}, updated_at = NOW() WHERE id = ${farmId}`)
+    await db.execute(`UPDATE farms SET plot_count = ${plotCount}, updated_at = NOW() WHERE id = ${farmId}`)
   } catch (error) {
     console.error(`Error updating plot count for farm with id ${farmId}:`, error)
     // Don't throw here, as this is a secondary operation
@@ -118,10 +121,11 @@ function plotDbToModel(dbPlot: any): Plot {
     id: dbPlot.id.toString(),
     farmId: dbPlot.farmId.toString(),
     name: dbPlot.name,
-    area: Number.parseFloat(dbPlot.area),
+    area: dbPlot.area ? Number.parseFloat(dbPlot.area) : 0,
     soilType: dbPlot.soilType,
-    dateEstablished: dbPlot.dateEstablished.toISOString(),
-    rowCount: dbPlot.rowCount,
+    dateEstablished: dbPlot.plantedDate ? dbPlot.plantedDate.toISOString() : "",
+    rowCount: dbPlot.rowCount ?? 0,
     healthStatus: dbPlot.healthStatus,
+    holes: dbPlot.holes !== null && dbPlot.holes !== undefined ? Number(dbPlot.holes) : 0,
   }
 }
