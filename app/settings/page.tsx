@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Bell, Moon, Sun, Laptop, Lock, UserCog, Smartphone, Mail, BellRing } from "lucide-react"
+import Link from "next/link"
 
 export default function SettingsPage() {
   const [theme, setTheme] = useState("system")
@@ -363,6 +364,20 @@ export default function SettingsPage() {
                 </CardFooter>
               </Card>
             </TabsContent>
+            <Card>
+              <CardHeader>
+                <CardTitle>Farm Health Scoring</CardTitle>
+                <CardDescription>Manage parameters for farm health assessment</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Configure the parameters used to calculate farm health scores
+                </p>
+                <Button asChild>
+                  <Link href="/settings/scoring">Manage Scoring Parameters</Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </Tabs>

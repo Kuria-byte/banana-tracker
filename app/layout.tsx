@@ -1,4 +1,6 @@
 import type React from "react"
+import { StackProvider, StackTheme } from "@stackframe/stack";
+import { stackServerApp } from "../stack";
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
@@ -6,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { MobileNav } from "@/components/mobile-nav"
 import { Header } from "@/components/header"
 import { QuickActions } from "@/components/quick-actions"
+import { AuthProvider } from "@/lib/auth/auth-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -22,18 +25,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <div className="flex min-h-screen flex-col">
-            <Header />
-            <main className="flex-1 pb-16 md:pb-0">{children}</main>
-            <div className="fixed bottom-0 left-0 z-50 w-full md:hidden">
-              <MobileNav />
+      <body className={inter.className}><StackProvider app={stackServerApp}><StackTheme>
+        <AuthProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <div className="flex min-h-screen flex-col">
+              <Header />
+              <main className="flex-1 pb-16 md:pb-0">{children}</main>
+              <div className="fixed bottom-0 left-0 z-50 w-full md:hidden">
+                <MobileNav />
+              </div>
+              <QuickActions />
             </div>
-            <QuickActions />
-          </div>
-        </ThemeProvider>
-      </body>
+          </ThemeProvider>
+        </AuthProvider>
+      </StackTheme></StackProvider></body>
     </html>
   )
 }

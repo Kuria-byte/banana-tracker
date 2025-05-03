@@ -2,42 +2,36 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Map, Calendar, Leaf, BarChart3 } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-const navItems = [
-  { name: "Dashboard", href: "/", icon: Home },
-  { name: "Farms", href: "/farms", icon: Map },
-  { name: "Tasks", href: "/tasks", icon: Calendar },
-  { name: "Growth", href: "/growth", icon: Leaf },
-  { name: "Reports", href: "/reports", icon: BarChart3 },
-]
+import { NavDropdown } from "@/components/ui/nav-dropdown"
+import { primaryNavItems, secondaryNavItems, isPathActive } from "@/lib/navigation-config"
 
 export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <div className="bg-background border-t">
-      <nav className="flex justify-around">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
-          const Icon = item.icon
+    <nav className="md:hidden flex justify-between items-center p-2 bg-background border-t">
+      {primaryNavItems.map((link) => {
+        const isActive = isPathActive(pathname, link.href)
+        const LinkIcon = link.icon
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex flex-col items-center py-2 px-3",
-                isActive ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-              <Icon className="h-5 w-5" />
-              <span className="text-xs mt-1">{item.name}</span>
-            </Link>
-          )
-        })}
-      </nav>
-    </div>
+        return (
+          <Link
+            key={link.name}
+            href={link.href}
+            className={cn(
+              "flex flex-col items-center gap-1 rounded-lg px-3 py-2 text-xs transition-colors min-w-[4rem]",
+              isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground",
+            )}
+          >
+            <LinkIcon className="h-5 w-5" />
+            <span>{link.name}</span>
+          </Link>
+        )
+      })}
+
+      {/* More dropdown */}
+      <NavDropdown items={secondaryNavItems} variant="mobile" />
+    </nav>
   )
 }

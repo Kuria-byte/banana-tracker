@@ -9,7 +9,7 @@ export function KnowledgeLinkCard() {
       <CardHeader className="bg-green-50 dark:bg-green-900/20">
         <CardTitle className="flex items-center gap-2">
           <BookOpen className="h-5 w-5 text-green-600 dark:text-green-400" />
-          Banana Farming Knowledge
+          Knowledge Hub
         </CardTitle>
         <CardDescription>Enhance your farming practices with expert knowledge</CardDescription>
       </CardHeader>

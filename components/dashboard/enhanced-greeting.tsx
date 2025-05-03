@@ -1,24 +1,22 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Calendar, CheckCircle2, Clock, CloudRain, Droplets, Leaf, MapPin, Sun, Thermometer, Wind } from "lucide-react"
+import { useUser } from "@stackframe/stack"
+import { Clock, CloudRain, Droplets, Leaf, MapPin, Sun, Thermometer, Wind, CheckCircle2, LineChart } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
+import { FarmSelectionModal } from "@/components/modals/farm-selection-modal"
 import { farms, tasks } from "@/lib/mock-data"
 
-// Current user info - in a real app, this would come from authentication
-const currentUser = {
-  name: "Joy",
-  role: "Farm Manager",
-}
-
 export function EnhancedGreeting() {
+  const user = useUser()
+
   const [greeting, setGreeting] = useState("Hello")
   const [currentTime, setCurrentTime] = useState("")
   const [currentDate, setCurrentDate] = useState("")
 
-  // Get time-based greeting
   useEffect(() => {
     const updateGreeting = () => {
       const hour = new Date().getHours()
@@ -26,7 +24,6 @@ export function EnhancedGreeting() {
       else if (hour < 18) setGreeting("Good afternoon")
       else setGreeting("Good evening")
 
-      // Format time
       const timeOptions: Intl.DateTimeFormatOptions = {
         hour: "numeric",
         minute: "2-digit",
@@ -34,7 +31,6 @@ export function EnhancedGreeting() {
       }
       setCurrentTime(new Date().toLocaleTimeString(undefined, timeOptions))
 
-      // Format date
       const dateOptions: Intl.DateTimeFormatOptions = {
         weekday: "long",
         month: "long",
@@ -44,26 +40,26 @@ export function EnhancedGreeting() {
     }
 
     updateGreeting()
-    const interval = setInterval(updateGreeting, 60000) // Update every minute
-
+    const interval = setInterval(updateGreeting, 60000)
     return () => clearInterval(interval)
   }, [])
 
-  // Calculate farm statistics
+  // Calculate farm and task stats (replace with real DB data as you connect)
   const totalFarms = farms.length
   const healthyFarms = farms.filter((farm) => farm.healthStatus === "Good").length
   const healthPercentage = Math.round((healthyFarms / totalFarms) * 100)
-
-  // Calculate task statistics
   const totalTasks = tasks.length
   const completedTasks = tasks.filter((task) => task.status === "Completed").length
   const taskPercentage = Math.round((completedTasks / totalTasks) * 100)
-
-  // Get pending tasks due today
   const today = new Date().toISOString().split("T")[0]
   const tasksDueToday = tasks.filter(
     (task) => task.status !== "Completed" && task.dueDate.split("T")[0] === today,
   ).length
+
+  // Show loading state if user is not loaded yet
+  if (!user) {
+    return <div>Loading...</div>
+  }
 
   return (
     <Card className="border-none shadow-none bg-gradient-to-br from-primary/5 to-background">
@@ -80,7 +76,7 @@ export function EnhancedGreeting() {
               </div>
 
               <h1 className="text-3xl font-bold tracking-tight">
-                {greeting}, {currentUser.name}
+                {greeting}, {user.displayName || user.primaryEmail}
               </h1>
               <p className="text-muted-foreground">Welcome back to your farm management dashboard</p>
             </div>
@@ -120,18 +116,24 @@ export function EnhancedGreeting() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" className="h-8">
-                <Calendar className="mr-2 h-3.5 w-3.5" />
-                View schedule
+              <Button variant="outline" size="sm" className="h-8" asChild>
+                <Link href="/tasks">
+                  <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
+                  Assign Task
+                </Link>
               </Button>
-              <Button variant="outline" size="sm" className="h-8">
-                <MapPin className="mr-2 h-3.5 w-3.5" />
-                Farm map
+              <Button variant="outline" size="sm" className="h-8" asChild>
+                <Link href="/growth">
+                  <Leaf className="mr-2 h-3.5 w-3.5" />
+                  Record Growth
+                </Link>
               </Button>
-              <Button variant="outline" size="sm" className="h-8">
-                <Leaf className="mr-2 h-3.5 w-3.5" />
-                Health reports
-              </Button>
+              <FarmSelectionModal>
+                <Button variant="outline" size="sm" className="h-8">
+                  <LineChart className="mr-2 h-3.5 w-3.5" />
+                  Score Farm
+                </Button>
+              </FarmSelectionModal>
             </div>
           </div>
 

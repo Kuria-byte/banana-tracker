@@ -2,27 +2,12 @@
 
 import { revalidatePath } from "next/cache"
 import type { PlotFormValues } from "@/lib/validations/form-schemas"
+import * as plotRepository from "@/db/repositories/plot-repository-fallback"
 
 export async function addPlot(values: PlotFormValues) {
   try {
-    // In a real app, you would save this data to a database
-    // For now, we'll just simulate a successful save
-    console.log("Adding plot:", values)
-
-    // Simulate adding to the mock data
-    const newPlot = {
-      id: `plot-${Date.now()}`,
-      farmId: values.farmId,
-      name: values.name,
-      area: values.area,
-      soilType: values.soilType,
-      dateEstablished: values.dateEstablished.toISOString(),
-      healthStatus: values.healthStatus,
-      rowCount: 0,
-    }
-
-    // In a real app, this would be a database operation
-    // plots.push(newPlot)
+    // Create the plot in the database (with fallback to mock data)
+    const newPlot = await plotRepository.createPlot(values)
 
     // Revalidate the farm page to show the new plot
     revalidatePath(`/farms/${values.farmId}`)
@@ -31,6 +16,7 @@ export async function addPlot(values: PlotFormValues) {
     return {
       success: true,
       message: "Plot added successfully!",
+      plot: newPlot,
     }
   } catch (error) {
     console.error("Error adding plot:", error)
@@ -43,9 +29,8 @@ export async function addPlot(values: PlotFormValues) {
 
 export async function updatePlot(plotId: string, values: PlotFormValues) {
   try {
-    // In a real app, you would update this data in a database
-    // For now, we'll just simulate a successful update
-    console.log("Updating plot:", { id: plotId, ...values })
+    // Update the plot in the database (with fallback to mock data)
+    const updatedPlot = await plotRepository.updatePlot(plotId, values)
 
     // Revalidate the farm page to show the updated plot
     revalidatePath(`/farms/${values.farmId}`)
@@ -54,12 +39,103 @@ export async function updatePlot(plotId: string, values: PlotFormValues) {
     return {
       success: true,
       message: "Plot updated successfully!",
+      plot: updatedPlot,
     }
   } catch (error) {
     console.error("Error updating plot:", error)
     return {
       success: false,
       error: "Failed to update plot. Please try again.",
+    }
+  }
+}
+
+export async function deletePlot(plotId: string, farmId: string) {
+  try {
+    // Delete the plot from the database (with fallback to mock data)
+    const success = await plotRepository.deletePlot(plotId)
+
+    if (!success) {
+      return {
+        success: false,
+        error: "Plot not found or could not be deleted.",
+      }
+    }
+
+    // Revalidate the farm page to remove the deleted plot
+    revalidatePath(`/farms/${farmId}`)
+    revalidatePath("/")
+
+    return {
+      success: true,
+      message: "Plot deleted successfully!",
+    }
+  } catch (error) {
+    console.error("Error deleting plot:", error)
+    return {
+      success: false,
+      error: "Failed to delete plot. Please try again.",
+    }
+  }
+}
+
+// Add a new function to get all plots
+export async function getAllPlots() {
+  try {
+    const plots = await plotRepository.getAllPlots()
+    return {
+      success: true,
+      plots,
+    }
+  } catch (error) {
+    console.error("Error fetching plots:", error)
+    return {
+      success: false,
+      error: "Failed to fetch plots. Please try again.",
+      plots: [],
+    }
+  }
+}
+
+// Add a new function to get a plot by ID
+export async function getPlotById(plotId: string) {
+  try {
+    const plot = await plotRepository.getPlotById(plotId)
+
+    if (!plot) {
+      return {
+        success: false,
+        error: "Plot not found.",
+      }
+    }
+
+    return {
+      success: true,
+      plot,
+    }
+  } catch (error) {
+    console.error(`Error fetching plot with id ${plotId}:`, error)
+    return {
+      success: false,
+      error: "Failed to fetch plot. Please try again.",
+    }
+  }
+}
+
+// Add a new function to get plots by farm ID
+export async function getPlotsByFarmId(farmId: string) {
+  try {
+    const plots = await plotRepository.getPlotsByFarmId(farmId)
+    return {
+      success: true,
+      plots,
+    }
+  } catch (error) {
+    console.error(`Error fetching plots for farm with id ${farmId}:`, error)
+    return {
+      success: false,
+      error: "Failed to fetch plots. Please try again.",
+      plots: [],
     }
   }
 }

@@ -42,7 +42,7 @@ export default function GrowthPage() {
           </TabsTrigger>
           <TabsTrigger value="harvest" className="flex items-center">
             <Calendar className="mr-2 h-4 w-4" />
-            Harvest Planning
+            Harvest
           </TabsTrigger>
         </TabsList>
 

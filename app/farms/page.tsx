@@ -7,6 +7,7 @@ import { FarmFilter } from "@/components/farms/farm-filter"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import { FarmFormModal } from "@/components/modals/farm-form-modal"
+import { FarmHealthDashboard } from "@/components/farms/farm-health-dashboard"
 
 export default function FarmsPage() {
   const [filteredFarms, setFilteredFarms] = useState(farms)
@@ -53,6 +54,10 @@ export default function FarmsPage() {
           title="Add New Farm"
           description="Create a new banana plantation"
         />
+      </div>
+
+      <div className="mb-8">
+        <FarmHealthDashboard farms={farms} />
       </div>
 
       <div className="mb-6">

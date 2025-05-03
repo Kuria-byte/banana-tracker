@@ -1,79 +1,51 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { TeamMemberCard } from "./team-member-card"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { TeamMemberCard } from "@/components/team/team-member-card"
 import { Search } from "lucide-react"
-
-interface User {
-  id: string
-  name: string
-  role: string
-  avatar: string
-  status: string
-}
+import { TeamMemberFormModal } from "../modals/team-member-form-modal"
+import type { TeamMember } from "@/lib/types/team"
 
 interface TeamMembersListProps {
-  users: User[]
+  members: TeamMember[]
 }
 
-export function TeamMembersList({ users }: TeamMembersListProps) {
+export function TeamMembersList({ members }: TeamMembersListProps) {
   const [searchQuery, setSearchQuery] = useState("")
-  const [roleFilter, setRoleFilter] = useState("all")
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesRole = roleFilter === "all" || user.role.toLowerCase() === roleFilter.toLowerCase()
-    return matchesSearch && matchesRole
-  })
-
-  // Extract unique roles for the filter
-  const roles = Array.from(new Set(users.map((user) => user.role)))
+  const filteredMembers = members.filter(
+    (member) =>
+      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.email?.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-2 justify-between">
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            type="search"
             placeholder="Search team members..."
-            className="pl-8"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8"
           />
         </div>
-        <div className="w-full sm:w-[200px]">
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              {roles.map((role) => (
-                <SelectItem key={role} value={role.toLowerCase()}>
-                  {role}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <TeamMemberFormModal />
+      </div>
+
+      {filteredMembers.length === 0 ? (
+        <div className="text-center py-10">
+          <p className="text-muted-foreground">No team members found</p>
         </div>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredUsers.map((user) => (
-          <TeamMemberCard key={user.id} user={user} />
-        ))}
-      </div>
-
-      {filteredUsers.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-10">
-            <p className="text-muted-foreground">No team members found matching your criteria</p>
-          </CardContent>
-        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredMembers.map((member) => (
+            <TeamMemberCard key={member.id} user={member} />
+          ))}
+        </div>
       )}
     </div>
   )

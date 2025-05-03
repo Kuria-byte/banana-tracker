@@ -1,8 +1,12 @@
+"use client"
+
+import { useState } from "react"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Mail, Phone, MessageSquare } from "lucide-react"
+import { Mail, Phone, MessageSquare, ChevronDown, ChevronUp } from "lucide-react"
 import { TeamMemberDetailsModal } from "./team-member-details-modal"
+import { formatCurrency } from "@/lib/utils/currency-formatter"
 
 interface User {
   id: string
@@ -10,6 +14,10 @@ interface User {
   role: string
   avatar: string
   status: string
+  email: string
+  phone: string
+  salary: number
+  responsibilities?: string[]
 }
 
 interface TeamMemberCardProps {
@@ -17,6 +25,8 @@ interface TeamMemberCardProps {
 }
 
 export function TeamMemberCard({ user }: TeamMemberCardProps) {
+  const [showResponsibilities, setShowResponsibilities] = useState(false)
+
   // Generate initials from name
   const initials = user.name
     .split(" ")
@@ -35,8 +45,8 @@ export function TeamMemberCard({ user }: TeamMemberCardProps) {
 
   // Mock data for contact info
   const contactInfo = {
-    email: `${user.name.toLowerCase().replace(/\s/g, ".")}@bananatracker.com`,
-    phone: `+254 ${Math.floor(Math.random() * 900000000) + 100000000}`,
+    email: user.email || `${user.name.toLowerCase().replace(/\s/g, ".")}@bananatracker.com`,
+    phone: user.phone || `+254 ${Math.floor(Math.random() * 900000000) + 100000000}`,
   }
 
   return (
@@ -69,7 +79,40 @@ export function TeamMemberCard({ user }: TeamMemberCardProps) {
             <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
             <span>{contactInfo.phone}</span>
           </div>
+          <div className="flex items-center text-sm font-medium mt-2">
+            <span>Salary: {formatCurrency(user.salary || 0, "KES")}</span>
+          </div>
         </div>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full mt-3 flex items-center justify-center"
+          onClick={() => setShowResponsibilities(!showResponsibilities)}
+        >
+          {showResponsibilities ? (
+            <>
+              <ChevronUp className="mr-2 h-4 w-4" /> Hide Responsibilities
+            </>
+          ) : (
+            <>
+              <ChevronDown className="mr-2 h-4 w-4" /> Show Responsibilities
+            </>
+          )}
+        </Button>
+
+        {showResponsibilities && (
+          <div className="mt-2 p-3 bg-muted rounded-md">
+            <h4 className="font-medium mb-1">Responsibilities:</h4>
+            <ul className="list-disc pl-5 text-sm space-y-1">
+              {user.responsibilities && user.responsibilities.length > 0 ? (
+                user.responsibilities.map((responsibility, index) => <li key={index}>{responsibility}</li>)
+              ) : (
+                <li>No responsibilities assigned</li>
+              )}
+            </ul>
+          </div>
+        )}
       </CardContent>
       <CardFooter className="flex justify-between pt-2">
         <Button variant="outline" size="sm">

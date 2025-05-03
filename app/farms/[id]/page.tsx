@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { CalendarDays, Edit, MapPin, User, ArrowLeft, Leaf, LayoutGrid, Plus } from "lucide-react"
+import { CalendarDays, Edit, MapPin, User, ArrowLeft, Leaf, LayoutGrid, Plus, Activity } from "lucide-react"
 import Link from "next/link"
 import { TaskCard } from "@/components/tasks/task-card"
 import { FarmFormModal } from "@/components/modals/farm-form-modal"
 import { PlotFormModal } from "@/components/modals/plot-form-modal"
 import { TaskFormModal } from "@/components/modals/task-form-modal"
 import { GrowthFormModal } from "@/components/modals/growth-form-modal"
+import { FarmHealthScoringModal } from "@/components/modals/farm-health-scoring-modal"
 
 export default function FarmDetailPage() {
   const params = useParams()
@@ -166,6 +167,10 @@ export default function FarmDetailPage() {
             <Leaf className="mr-2 h-4 w-4" />
             Growth
           </TabsTrigger>
+          <TabsTrigger value="health" className="flex items-center">
+            <Activity className="mr-2 h-4 w-4" />
+            Health Tracking
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="plots">
@@ -286,6 +291,21 @@ export default function FarmDetailPage() {
               description="Record a growth stage for a banana plant"
               initialData={{ farmId }}
             />
+          </div>
+        </TabsContent>
+        <TabsContent value="health">
+          <div className="flex justify-between mb-4">
+            <h2 className="text-xl font-semibold">Farm Health Tracking</h2>
+            <Button asChild>
+              <Link href={`/farms/${farmId}/health`}>View Health Dashboard</Link>
+            </Button>
+          </div>
+
+          <div className="text-center py-12 border rounded-lg">
+            <p className="text-muted-foreground mb-4">
+              Track and assess the health of your farm using our comprehensive scoring system
+            </p>
+            <FarmHealthScoringModal farmId={farmId} trigger={<Button>Record Health Assessment</Button>} />
           </div>
         </TabsContent>
       </Tabs>
