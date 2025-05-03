@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { stackServerApp } from "@/stack"; // adjust path as needed
 import { Leaf, Map, Calendar, AlertTriangle } from "lucide-react"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { TaskList } from "@/components/dashboard/task-list"
@@ -10,7 +12,13 @@ import { HarvestForecast } from "@/components/dashboard/harvest-forecast"
 import { EnhancedGreeting } from "@/components/dashboard/enhanced-greeting"
 import { KnowledgeLinkCard } from "@/components/dashboard/knowledge-link-card"
 
-export default function Dashboard() {
+export default async function Dashboard() {
+  // Server-side authentication check
+  const user = await stackServerApp.getUser();
+  if (!user) {
+    redirect("/handler/sign-up"); 
+  }
+
   // Filter tasks that are pending or in progress
   const activeTasks = tasks.filter((task) => task.status === "Pending" || task.status === "In Progress")
 
@@ -81,7 +89,7 @@ export default function Dashboard() {
         </div>
         <div className="space-y-4">
           <FarmHealthStatus farms={farms} />
-          <TeamOverview users={users} />
+          <TeamOverview  />
           <KnowledgeLinkCard />
         </div>
       </div>
