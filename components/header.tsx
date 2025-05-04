@@ -33,6 +33,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { UserButton } from '@stackframe/stack';
 
 const navItems = [
   { name: "Dashboard", href: "/" },
@@ -71,12 +72,16 @@ export function Header() {
                 <Leaf className="h-5 w-5 text-primary" />
                 <div className="flex flex-col">
                   <span className="font-semibold">Farm Manager</span>
-                  <span className="text-xs text-muted-foreground">by Kamili</span>
+                  <span className="text-xs text-muted-foreground">
+                    by Kamili
+                  </span>
                 </div>
               </div>
               <nav className="flex flex-col gap-4">
                 {navItems.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                  const isActive =
+                    pathname === item.href ||
+                    pathname.startsWith(`${item.href}/`);
 
                   return (
                     <Link
@@ -85,12 +90,14 @@ export function Header() {
                       onClick={() => setOpen(false)}
                       className={cn(
                         "flex items-center gap-2 px-3 py-2 rounded-md",
-                        isActive ? "bg-muted text-primary font-medium" : "text-muted-foreground",
+                        isActive
+                          ? "bg-muted text-primary font-medium"
+                          : "text-muted-foreground"
                       )}
                     >
                       <span>{item.name}</span>
                     </Link>
-                  )
+                  );
                 })}
               </nav>
             </SheetContent>
@@ -106,7 +113,8 @@ export function Header() {
 
         <nav className="hidden md:flex items-center gap-6 mx-6">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+            const isActive =
+              pathname === item.href || pathname.startsWith(`${item.href}/`);
 
             return (
               <Link
@@ -114,12 +122,12 @@ export function Header() {
                 href={item.href}
                 className={cn(
                   "text-sm font-medium transition-colors hover:text-primary",
-                  isActive ? "text-primary" : "text-muted-foreground",
+                  isActive ? "text-primary" : "text-muted-foreground"
                 )}
               >
                 {item.name}
               </Link>
-            )
+            );
           })}
         </nav>
 
@@ -134,12 +142,21 @@ export function Header() {
                   autoFocus
                   onBlur={() => setShowSearch(false)}
                 />
-                <Button variant="ghost" size="icon" className="absolute right-0" onClick={() => setShowSearch(false)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0"
+                  onClick={() => setShowSearch(false)}
+                >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
-              <Button variant="ghost" size="icon" onClick={() => setShowSearch(true)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowSearch(true)}
+              >
                 <Search className="h-5 w-5" />
                 <span className="sr-only">Search</span>
               </Button>
@@ -152,8 +169,16 @@ export function Header() {
               </Button>
             </Link>
 
-            <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            >
+              {theme === "dark" ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
               <span className="sr-only">Toggle theme</span>
             </Button>
           </div>
@@ -176,22 +201,38 @@ export function Header() {
                 <div className="max-h-[300px] overflow-auto">
                   <div className="p-2 hover:bg-muted rounded-md cursor-pointer">
                     <p className="text-sm font-medium">Task assigned to you</p>
-                    <p className="text-xs text-muted-foreground">Apply fertilizer to Karii East Farm</p>
-                    <p className="text-xs text-muted-foreground mt-1">2 hours ago</p>
+                    <p className="text-xs text-muted-foreground">
+                      Apply fertilizer to Karii East Farm
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      2 hours ago
+                    </p>
                   </div>
                   <div className="p-2 hover:bg-muted rounded-md cursor-pointer">
                     <p className="text-sm font-medium">Harvest reminder</p>
-                    <p className="text-xs text-muted-foreground">Karii East Farm - Plot B is ready for harvest</p>
-                    <p className="text-xs text-muted-foreground mt-1">Yesterday</p>
+                    <p className="text-xs text-muted-foreground">
+                      Karii East Farm - Plot B is ready for harvest
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Yesterday
+                    </p>
                   </div>
                   <div className="p-2 hover:bg-muted rounded-md cursor-pointer">
                     <p className="text-sm font-medium">Health alert</p>
-                    <p className="text-xs text-muted-foreground">Pest detected in Kangai South Farm</p>
-                    <p className="text-xs text-muted-foreground mt-1">2 days ago</p>
+                    <p className="text-xs text-muted-foreground">
+                      Pest detected in Kangai South Farm
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      2 days ago
+                    </p>
                   </div>
                 </div>
                 <DropdownMenuSeparator />
-                <Button variant="ghost" size="sm" className="w-full justify-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-center"
+                >
                   View all notifications
                 </Button>
               </DropdownMenuContent>
@@ -216,8 +257,14 @@ export function Header() {
                     <span>Help</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-                  {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+                <DropdownMenuItem
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                >
+                  {theme === "dark" ? (
+                    <Sun className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Moon className="mr-2 h-4 w-4" />
+                  )}
                   <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -225,40 +272,21 @@ export function Header() {
           </div>
 
           {/* User dropdown - both mobile and desktop */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 pl-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>{currentUser.initials}</AvatarFallback>
-                </Avatar>
-                <span className="hidden sm:inline-block text-sm font-medium">{currentUser.name}</span>
-                <ChevronDown className="h-4 w-4 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/profile">
-                  <UserIcon className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/settings">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <UserButton
+            showUserInfo={true}
+            colorModeToggle={() => {
+              console.log("color mode toggle clicked");
+            }}
+            extraItems={[
+              {
+                text: "Custom Action",
+                icon: <UserIcon />,
+                onClick: () => console.log("Custom action clicked"),
+              },
+            ]}
+          />
         </div>
       </div>
     </header>
-  )
+  );
 }
