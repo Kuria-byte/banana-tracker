@@ -8,9 +8,8 @@ import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { FarmSelectionModal } from "@/components/modals/farm-selection-modal"
-import { farms, tasks } from "@/lib/mock-data"
 
-export function EnhancedGreeting() {
+export function EnhancedGreeting({ farms, tasks }: { farms: any[]; tasks: any[] }) {
   const user = useUser()
 
   const [greeting, setGreeting] = useState("Hello")
@@ -44,7 +43,7 @@ export function EnhancedGreeting() {
     return () => clearInterval(interval)
   }, [])
 
-  // Calculate farm and task stats (replace with real DB data as you connect)
+  // Calculate farm and task stats using props
   const totalFarms = farms.length
   const healthyFarms = farms.filter((farm) => farm.healthStatus === "Good").length
   const healthPercentage = Math.round((healthyFarms / totalFarms) * 100)
@@ -53,7 +52,7 @@ export function EnhancedGreeting() {
   const taskPercentage = Math.round((completedTasks / totalTasks) * 100)
   const today = new Date().toISOString().split("T")[0]
   const tasksDueToday = tasks.filter(
-    (task) => task.status !== "Completed" && task.dueDate.split("T")[0] === today,
+    (task) => task.status !== "Completed" && task.dueDate && task.dueDate.split("T")[0] === today,
   ).length
 
   // Show loading state if user is not loaded yet

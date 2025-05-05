@@ -13,6 +13,8 @@ import {
   calculateFarmPerformance,
   getAllFarmsPerformance as calculateAllFarmsPerformance,
 } from "@/lib/mock-data/owner-dashboard-enhanced"
+import { getSalesSummary as dbGetSalesSummary, getSalesChartData as dbGetSalesChartData, getAllSalesRecords as repoGetAllSalesRecords } from "@/db/repositories/sales-records-repository"
+import { getExpensesSummary as dbGetExpensesSummary, getExpensesChartData as dbGetExpensesChartData, getAllExpensesRecords as repoGetAllExpensesRecords } from "@/db/repositories/expenses-records-repository"
 
 // Get sales summary
 export async function getSalesSummary(
@@ -21,20 +23,8 @@ export async function getSalesSummary(
   endDate?: string,
   farmIds?: string[],
 ) {
-  try {
-    const summary = calculateSalesSummary(period, startDate, endDate, farmIds)
-
-    return {
-      success: true,
-      data: summary,
-    }
-  } catch (error) {
-    console.error("Error fetching sales summary:", error)
-    return {
-      success: false,
-      error: "Failed to fetch sales summary",
-    }
-  }
+  // TODO: Map period to date range if needed
+  return { success: true, data: await dbGetSalesSummary({ startDate, endDate }) }
 }
 
 // Get expense summary
@@ -44,20 +34,7 @@ export async function getExpenseSummary(
   endDate?: string,
   farmIds?: string[],
 ) {
-  try {
-    const summary = calculateExpenseSummary(period, startDate, endDate, farmIds)
-
-    return {
-      success: true,
-      data: summary,
-    }
-  } catch (error) {
-    console.error("Error fetching expense summary:", error)
-    return {
-      success: false,
-      error: "Failed to fetch expense summary",
-    }
-  }
+  return { success: true, data: await dbGetExpensesSummary({ startDate, endDate }) }
 }
 
 // Get farm performance
@@ -103,20 +80,7 @@ export async function getSalesChartData(
   endDate?: string,
   farmIds?: string[],
 ) {
-  try {
-    const chartData = calculateSalesChartData(period, startDate, endDate, farmIds)
-
-    return {
-      success: true,
-      data: chartData,
-    }
-  } catch (error) {
-    console.error("Error fetching sales chart data:", error)
-    return {
-      success: false,
-      error: "Failed to fetch sales chart data",
-    }
-  }
+  return { success: true, data: await dbGetSalesChartData({ startDate, endDate }) }
 }
 
 // Get expense chart data
@@ -126,20 +90,7 @@ export async function getExpenseChartData(
   endDate?: string,
   farmIds?: string[],
 ) {
-  try {
-    const chartData = calculateExpenseChartData(period, startDate, endDate, farmIds)
-
-    return {
-      success: true,
-      data: chartData,
-    }
-  } catch (error) {
-    console.error("Error fetching expense chart data:", error)
-    return {
-      success: false,
-      error: "Failed to fetch expense chart data",
-    }
-  }
+  return { success: true, data: await dbGetExpensesChartData({ startDate, endDate }) }
 }
 
 // Add new sale record
@@ -231,29 +182,7 @@ export async function getAllSalesRecords(
   endDate?: string,
   farmIds?: string[],
 ) {
-  try {
-    const start = startDate ? new Date(startDate) : new Date(Date.now() - getPeriodInMilliseconds(period))
-    const end = endDate ? new Date(endDate) : new Date()
-
-    const filteredSales = mockSalesRecords.filter((sale) => {
-      const saleDate = new Date(sale.date)
-      const isInDateRange = saleDate >= start && saleDate <= end
-      const isInFarmList = farmIds ? farmIds.includes(sale.farmId) : true
-
-      return isInDateRange && isInFarmList
-    })
-
-    return {
-      success: true,
-      data: filteredSales,
-    }
-  } catch (error) {
-    console.error("Error fetching sales records:", error)
-    return {
-      success: false,
-      error: "Failed to fetch sales records",
-    }
-  }
+  return { success: true, data: await repoGetAllSalesRecords({ startDate, endDate }) }
 }
 
 // Get all expense records
@@ -263,29 +192,7 @@ export async function getAllExpenseRecords(
   endDate?: string,
   farmIds?: string[],
 ) {
-  try {
-    const start = startDate ? new Date(startDate) : new Date(Date.now() - getPeriodInMilliseconds(period))
-    const end = endDate ? new Date(endDate) : new Date()
-
-    const filteredExpenses = mockExpenseRecords.filter((expense) => {
-      const expenseDate = new Date(expense.date)
-      const isInDateRange = expenseDate >= start && expenseDate <= end
-      const isInFarmList = farmIds ? farmIds.includes(expense.farmId) : true
-
-      return isInDateRange && isInFarmList
-    })
-
-    return {
-      success: true,
-      data: filteredExpenses,
-    }
-  } catch (error) {
-    console.error("Error fetching expense records:", error)
-    return {
-      success: false,
-      error: "Failed to fetch expense records",
-    }
-  }
+  return { success: true, data: await repoGetAllExpensesRecords({ startDate, endDate }) }
 }
 
 // Helper function to get period in milliseconds

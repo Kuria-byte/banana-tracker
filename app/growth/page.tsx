@@ -1,5 +1,3 @@
-"use client"
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -9,8 +7,22 @@ import { GrowthFormModal } from "@/components/modals/growth-form-modal"
 import { Plus } from "lucide-react"
 import { HealthReportsModal } from "@/components/modals/health-reports-modal"
 import { HarvestPlanModal } from "@/components/modals/harvest-plan-modal"
+import { getUiGrowthStageDistribution, getUiHealthStatusDistribution } from "@/db/repositories/growth-records-repository"
+import { getUpcomingHarvestYield } from "@/db/repositories/harvest-records-repository"
 
-export default function GrowthPage() {
+export default async function GrowthPage() {
+  // Fetch real data from Neon
+  const [stageDist, healthDist, harvestYield] = await Promise.all([
+    getUiGrowthStageDistribution(),
+    getUiHealthStatusDistribution(),
+    getUpcomingHarvestYield(),
+  ])
+
+  // Helper to get % by stage name
+  const getStagePercent = (name: string) => stageDist.find(s => s.stage === name)?.percent ?? 0
+  // Helper to get % by health status
+  const getHealthPercent = (status: string) => healthDist.find(h => h.status === status)?.percent ?? 0
+
   return (
     <div className="container px-4 py-6 md:px-6 md:py-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -55,37 +67,22 @@ export default function GrowthPage() {
               </CardHeader>
               <CardContent className="pb-2">
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Flower Emergence</span>
-                    <span className="text-sm font-medium">24%</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="bg-blue-500 h-full rounded-full" style={{ width: "24%" }}></div>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Bunch Formation</span>
-                    <span className="text-sm font-medium">38%</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="bg-yellow-500 h-full rounded-full" style={{ width: "38%" }}></div>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Fruit Development</span>
-                    <span className="text-sm font-medium">28%</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="bg-green-500 h-full rounded-full" style={{ width: "28%" }}></div>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Ready for Harvest</span>
-                    <span className="text-sm font-medium">10%</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="bg-red-500 h-full rounded-full" style={{ width: "10%" }}></div>
-                  </div>
+                  {[
+                    { name: "Flower Emergence", color: "bg-blue-500" },
+                    { name: "Bunch Formation", color: "bg-yellow-500" },
+                    { name: "Fruit Development", color: "bg-green-500" },
+                    { name: "Ready for Harvest", color: "bg-red-500" },
+                  ].map(({ name, color }) => (
+                    <div key={name}>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">{name}</span>
+                        <span className="text-sm font-medium">{getStagePercent(name)}%</span>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div className={`${color} h-full rounded-full`} style={{ width: `${getStagePercent(name)}%` }}></div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
               <CardFooter>
@@ -101,8 +98,8 @@ export default function GrowthPage() {
                 <CardDescription>Next 30 days</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">12</div>
-                <p className="text-sm text-muted-foreground">Estimated yield: 240kg</p>
+                <div className="text-3xl font-bold">{harvestYield.count ?? 0}</div>
+                <p className="text-sm text-muted-foreground">Estimated yield: {harvestYield.totalWeight ?? 0}kg</p>
               </CardContent>
               <CardFooter>
                 <Button variant="outline" className="w-full" asChild>
@@ -118,37 +115,22 @@ export default function GrowthPage() {
               </CardHeader>
               <CardContent className="pb-2">
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Healthy</span>
-                    <span className="text-sm font-medium">75%</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="bg-green-500 h-full rounded-full" style={{ width: "75%" }}></div>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Diseased</span>
-                    <span className="text-sm font-medium">12%</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="bg-yellow-500 h-full rounded-full" style={{ width: "12%" }}></div>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Pest-affected</span>
-                    <span className="text-sm font-medium">8%</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="bg-orange-500 h-full rounded-full" style={{ width: "8%" }}></div>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Damaged</span>
-                    <span className="text-sm font-medium">5%</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="bg-red-500 h-full rounded-full" style={{ width: "5%" }}></div>
-                  </div>
+                  {[
+                    { status: "Healthy", color: "bg-green-500" },
+                    { status: "Diseased", color: "bg-yellow-500" },
+                    { status: "Pest-affected", color: "bg-orange-500" },
+                    { status: "Damaged", color: "bg-red-500" },
+                  ].map(({ status, color }) => (
+                    <div key={status}>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">{status}</span>
+                        <span className="text-sm font-medium">{getHealthPercent(status)}%</span>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div className={`${color} h-full rounded-full`} style={{ width: `${getHealthPercent(status)}%` }}></div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
               <CardFooter>

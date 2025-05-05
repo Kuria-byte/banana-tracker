@@ -4,44 +4,49 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import type { MonthlyHealthSummary } from "@/lib/types/farm-health"
-import { calculateMonthlyHealthSummary } from "@/app/actions/farm-health-actions"
-import { getScoringParameterById } from "@/lib/mock-data/farm-health-scoring"
+import type { MonthlyHealthSummary, ScoringParameter } from "@/lib/types/farm-health"
+import { calculateMonthlyHealthSummary, getScoringParameters } from "@/app/actions/farm-health-actions"
 
 interface FarmHealthSummaryProps {
   farmId: string
+  month: number
+  year: number
 }
 
-export function FarmHealthSummary({ farmId }: FarmHealthSummaryProps) {
+export function FarmHealthSummary({ farmId, month, year }: FarmHealthSummaryProps) {
   const [summary, setSummary] = useState<MonthlyHealthSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [parameters, setParameters] = useState<ScoringParameter[]>([])
 
   useEffect(() => {
     async function loadSummary() {
       setLoading(true)
       try {
-        // Get the current month and year
-        const now = new Date()
-        const year = now.getFullYear()
-        const month = now.getMonth() + 1 // JavaScript months are 0-indexed
-
         const result = await calculateMonthlyHealthSummary(farmId, year, month)
-        if (result.success) {
-          setSummary(result.data)
+        if (result && result.success && result.data) {
+          setSummary(normalizeSummary(result.data))
         } else {
-          setError(result.error || "Failed to load health summary")
+          setSummary(null)
         }
       } catch (err) {
-        setError("An unexpected error occurred")
-        console.error(err)
+        setSummary(null)
       } finally {
         setLoading(false)
       }
     }
-
     loadSummary()
-  }, [farmId])
+  }, [farmId, month, year])
+
+  useEffect(() => {
+    getScoringParameters().then((result) => {
+      if (result && result.success && result.data) {
+        setParameters(result.data.map(normalizeParameter))
+      } else {
+        setParameters([])
+      }
+    })
+  }, [])
 
   const getHealthStatusColor = (status: string) => {
     switch (status) {
@@ -60,6 +65,24 @@ export function FarmHealthSummary({ farmId }: FarmHealthSummaryProps) {
     if (percentage >= 80) return "bg-green-500"
     if (percentage >= 60) return "bg-yellow-500"
     return "bg-red-500"
+  }
+
+  function normalizeParameter(param: any): ScoringParameter {
+    return {
+      id: param.id,
+      name: param.name ?? '',
+      description: param.description ?? '',
+      maxPoints: param.maxPoints ?? 0,
+      isActive: param.isActive ?? true,
+      category: param.category,
+    }
+  }
+
+  function normalizeSummary(summary: any): MonthlyHealthSummary {
+    return {
+      ...summary,
+      maxPossibleScore: Number(summary.maxPossibleScore ?? 0),
+    }
   }
 
   return (
@@ -106,7 +129,7 @@ export function FarmHealthSummary({ farmId }: FarmHealthSummaryProps) {
               <h3 className="text-sm font-medium">Parameter Breakdown</h3>
 
               {summary.parameters.map((param) => {
-                const parameter = getScoringParameterById(param.parameterId)
+                const parameter = parameters.find(p => p.id === param.parameterId)
                 if (!parameter) return null
 
                 const percentage = (param.averageScore / param.maxPoints) * 100
@@ -114,7 +137,7 @@ export function FarmHealthSummary({ farmId }: FarmHealthSummaryProps) {
                 return (
                   <div key={param.parameterId} className="space-y-1">
                     <div className="flex justify-between items-center">
-                      <p className="text-sm">{parameter.name}</p>
+                      <span className="font-medium">{parameter.name || "Unknown"}</span>
                       <p className="text-sm font-medium">
                         {Math.round(param.averageScore * 10) / 10} / {param.maxPoints}
                       </p>

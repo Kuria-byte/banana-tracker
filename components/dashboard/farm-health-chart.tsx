@@ -1,22 +1,21 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { Farm } from "@/lib/mock-data"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
 
 interface FarmHealthChartProps {
-  farms: Farm[]
+  healthCounts: {
+    Good: number
+    Average: number
+    Poor: number
+  }
 }
 
-export function FarmHealthChart({ farms }: FarmHealthChartProps) {
-  // Count farms by health status
-  const healthCounts = farms.reduce(
-    (acc, farm) => {
-      acc[farm.healthStatus] = (acc[farm.healthStatus] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>,
-  )
+export function FarmHealthChart({ healthCounts }: FarmHealthChartProps) {
+  const total = healthCounts.Good + healthCounts.Average + healthCounts.Poor
+  const goodPercent = total > 0 ? Math.round((healthCounts.Good / total) * 100) : 0
+  const averagePercent = total > 0 ? Math.round((healthCounts.Average / total) * 100) : 0
+  const poorPercent = total > 0 ? Math.round((healthCounts.Poor / total) * 100) : 0
 
   const data = [
     { name: "Good", value: healthCounts["Good"] || 0 },

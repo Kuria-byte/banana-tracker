@@ -15,6 +15,8 @@ export const taskTypeEnum = pgEnum("task_type", [
 export const userRoleEnum = pgEnum("user_role", ["ADMIN", "MANAGER"])
 export const paymentStatusEnum = pgEnum("payment_status", ["Paid", "Pending", "Partial"])
 export const paymentMethodEnum = pgEnum("payment_method", ["Cash", "Bank Transfer", "Mobile Money"])
+export const expenseStatusEnum = pgEnum("expense_status", ["Paid", "Pending", "Partial"])
+export const expensePaymentMethodEnum = pgEnum("expense_payment_method", ["Cash", "Bank Transfer", "Mobile Money"])
 
 // Users table
 export const users = pgTable("users", {
@@ -123,7 +125,6 @@ export const farmInspections = pgTable("farm_inspections", {
 // Inspection metrics
 export const inspectionMetrics = pgTable("inspection_metrics", {
   id: serial("id").primaryKey(),
-  inspectionId: integer("inspection_id").references(() => farmInspections.id).notNull(),
   metricName: varchar("metric_name", { length: 64 }),
   score: integer("score"),
   maxScore: integer("max_score"),
@@ -217,6 +218,20 @@ export const expenses = pgTable("expenses", {
   description: text("description"),
   recordedBy: integer("recorded_by").references(() => users.id),
   notes: text("notes"),
+  status: expenseStatusEnum("status").default("Pending"),
+  paymentMethod: expensePaymentMethodEnum("payment_method"),
+})
+
+// Budgets table
+export const budgets = pgTable("budgets", {
+  id: serial("id").primaryKey(),
+  farmId: integer("farm_id").references(() => farms.id).notNull(),
+  year: integer("year").notNull(),
+  category: varchar("category", { length: 64 }),
+  amount: decimal("amount").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
 // Buyers table

@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { type Task, getUserById, getFarmById, getPlotById } from "@/lib/mock-data"
+import { type Task, getPlotById } from "@/lib/mock-data"
 import { Badge } from "@/components/ui/badge"
 import { formatDistanceToNow } from "date-fns"
 import { Button } from "@/components/ui/button"
@@ -13,8 +13,6 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onStatusChange }: TaskCardProps) {
-  const assignedUser = getUserById(task.assignedToId)
-  const farm = getFarmById(task.farmId)
   const plot = task.plotId ? getPlotById(task.plotId) : null
 
   const getStatusColor = () => {
@@ -82,13 +80,17 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-muted-foreground" />
             <span>
-              {farm?.name}
+              {task.farmName}
+              {task.farmLocation ? ` (${task.farmLocation})` : ""}
               {plot ? ` - ${plot.name}` : ""}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
-            <span>Assigned to {assignedUser?.name}</span>
+            <span>Assigned to {task.assigneeName || "Unassigned"}</span>
+            {task.assigneeEmail && (
+              <span className="ml-2 text-xs text-muted-foreground">({task.assigneeEmail})</span>
+            )}
           </div>
         </div>
       </CardContent>

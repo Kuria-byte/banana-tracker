@@ -92,6 +92,11 @@ export interface Task {
   priority: "Low" | "Medium" | "High" | "Urgent"
   type: "Planting" | "Harvesting" | "Maintenance" | "Input Application" | "Inspection"
   dateCreated?: string
+  // New fields for real DB data
+  farmName?: string
+  farmLocation?: string
+  assigneeName?: string
+  assigneeEmail?: string
 }
 
 // Harvest interface

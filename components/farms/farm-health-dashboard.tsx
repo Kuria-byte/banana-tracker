@@ -8,6 +8,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import type { Farm } from "@/lib/mock-data"
 import { calculateMonthlyHealthSummary } from "@/app/actions/farm-health-actions"
 import type { MonthlyHealthSummary } from "@/lib/types/farm-health"
+import { FarmHealthStatus } from "@/components/dashboard/farm-health-status"
+import { FarmHealthChart } from "@/components/dashboard/farm-health-chart"
 
 interface FarmHealthDashboardProps {
   farms: Farm[]
@@ -18,6 +20,7 @@ export function FarmHealthDashboard({ farms }: FarmHealthDashboardProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [timeframe, setTimeframe] = useState("current")
+  const [healthCounts, setHealthCounts] = useState({ Good: 0, Average: 0, Poor: 0 })
 
   useEffect(() => {
     async function loadSummaries() {
@@ -41,9 +44,17 @@ export function FarmHealthDashboard({ farms }: FarmHealthDashboardProps) {
         const summaryPromises = farms.map((farm) => calculateMonthlyHealthSummary(farm.id, year, month))
 
         const results = await Promise.all(summaryPromises)
-        const validSummaries = results.filter((result) => result.success).map((result) => result.data)
+        const validSummaries = results.filter((result) => result.success && result.data !== undefined).map((result) => result.data as MonthlyHealthSummary)
 
         setSummaries(validSummaries)
+        // Calculate healthCounts from validSummaries
+        const counts = { Good: 0, Average: 0, Poor: 0 }
+        validSummaries.forEach((summary) => {
+          if (summary.healthStatus === "Good") counts.Good++
+          else if (summary.healthStatus === "Average") counts.Average++
+          else if (summary.healthStatus === "Poor") counts.Poor++
+        })
+        setHealthCounts(counts)
       } catch (err) {
         setError("An unexpected error occurred")
         console.error(err)
@@ -54,15 +65,6 @@ export function FarmHealthDashboard({ farms }: FarmHealthDashboardProps) {
 
     loadSummaries()
   }, [farms, timeframe])
-
-  // Count farms by health status
-  const healthCounts = summaries.reduce(
-    (acc, summary) => {
-      acc[summary.healthStatus] = (acc[summary.healthStatus] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>,
-  )
 
   // Calculate percentages
   const total = summaries.length
@@ -188,6 +190,9 @@ export function FarmHealthDashboard({ farms }: FarmHealthDashboardProps) {
             )}
           </>
         )}
+
+      
+      
       </CardContent>
     </Card>
   )

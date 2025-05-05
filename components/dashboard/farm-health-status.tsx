@@ -1,12 +1,15 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { Farm } from "@/lib/mock-data"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { AlertTriangle, CheckCircle, HelpCircle, TrendingDown, TrendingUp } from "lucide-react"
 
 interface FarmHealthStatusProps {
-  farms: Farm[]
+  healthCounts: {
+    Good: number
+    Average: number
+    Poor: number
+  }
   previousHealthData?: {
     Good: number
     Average: number
@@ -14,16 +17,7 @@ interface FarmHealthStatusProps {
   }
 }
 
-export function FarmHealthStatus({ farms, previousHealthData }: FarmHealthStatusProps) {
-  // Count farms by health status
-  const healthCounts = farms.reduce(
-    (acc, farm) => {
-      acc[farm.healthStatus] = (acc[farm.healthStatus] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>,
-  )
-
+export function FarmHealthStatus({ healthCounts, previousHealthData }: FarmHealthStatusProps) {
   // Default previous data if not provided
   const prevData = previousHealthData || {
     Good: healthCounts.Good - 1,
@@ -31,11 +25,11 @@ export function FarmHealthStatus({ farms, previousHealthData }: FarmHealthStatus
     Poor: healthCounts.Poor + 1,
   }
 
-  // Calculate percentages
-  const total = farms.length
-  const goodPercent = Math.round(((healthCounts.Good || 0) / total) * 100)
-  const averagePercent = Math.round(((healthCounts.Average || 0) / total) * 100)
-  const poorPercent = Math.round(((healthCounts.Poor || 0) / total) * 100)
+  // Calculate totals
+  const total = healthCounts.Good + healthCounts.Average + healthCounts.Poor
+  const goodPercent = total > 0 ? Math.round((healthCounts.Good / total) * 100) : 0
+  const averagePercent = total > 0 ? Math.round((healthCounts.Average / total) * 100) : 0
+  const poorPercent = total > 0 ? Math.round((healthCounts.Poor / total) * 100) : 0
 
   // Calculate trends
   const goodTrend = (healthCounts.Good || 0) - (prevData.Good || 0)

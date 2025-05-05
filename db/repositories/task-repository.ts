@@ -3,10 +3,32 @@ import { tasks } from "../schema"
 import { eq } from "drizzle-orm"
 import type { Task } from "@/lib/mock-data"
 import type { TaskFormValues } from "@/lib/validations/form-schemas"
+import { farms } from "../schema"
+import { users } from "../schema"
 
 export async function getAllTasks(): Promise<Task[]> {
   try {
-    const result = await db.select().from(tasks)
+    // Join tasks with farms and users to get farm and assignee info
+    const result = await db
+      .select({
+        id: tasks.id,
+        title: tasks.title,
+        description: tasks.description,
+        assignedToId: tasks.assigneeId,
+        farmId: tasks.farmId,
+        dueDate: tasks.dueDate,
+        status: tasks.status,
+        priority: tasks.priority,
+        dateCreated: tasks.createdAt,
+        farmName: farms.name,
+        farmLocation: farms.location,
+        assigneeName: users.name,
+        assigneeEmail: users.email,
+      })
+      .from(tasks)
+      .leftJoin(farms, eq(tasks.farmId, farms.id))
+      .leftJoin(users, eq(tasks.assigneeId, users.id))
+
     return result.map(taskDbToModel)
   } catch (error) {
     console.error("Error fetching tasks:", error)
@@ -141,15 +163,16 @@ function taskDbToModel(dbTask: any): Task {
     id: dbTask.id?.toString() ?? "",
     title: dbTask.title,
     description: dbTask.description,
-    assignedToId: dbTask.assigneeId?.toString() ?? "",
+    assignedToId: dbTask.assignedToId?.toString() ?? "",
     farmId: dbTask.farmId?.toString() ?? "",
-    plotId: dbTask.plotId ? dbTask.plotId.toString() : undefined,
-    rowId: dbTask.rowId ? dbTask.rowId.toString() : undefined,
     dueDate: dbTask.dueDate ? dbTask.dueDate.toISOString() : "",
     status: mapTaskStatusFromDb(dbTask.status),
     priority: dbTask.priority,
-    type: dbTask.type,
     dateCreated: dbTask.dateCreated ? dbTask.dateCreated.toISOString() : undefined,
+    farmName: dbTask.farmName ?? undefined,
+    farmLocation: dbTask.farmLocation ?? undefined,
+    assigneeName: dbTask.assigneeName ?? undefined,
+    assigneeEmail: dbTask.assigneeEmail ?? undefined,
   }
 }
 

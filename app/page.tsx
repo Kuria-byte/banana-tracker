@@ -81,7 +81,7 @@ export default async function Dashboard() {
     <div className="container px-4 py-6 md:px-6 md:py-8">
       {/* Enhanced greeting section */}
       <div className="mb-8">
-        <EnhancedGreeting />
+        <EnhancedGreeting farms={farms} tasks={tasks} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -121,7 +121,13 @@ export default async function Dashboard() {
           <TaskList tasks={tasks} limit={5} />
         </div>
         <div className="space-y-4">
-          <FarmHealthStatus farms={farmsWithMappedStatus} />
+        <FarmHealthStatus
+  healthCounts={{
+    Good: farmsWithMappedStatus.filter(f => f.healthStatus === "Good").length,
+    Average: farmsWithMappedStatus.filter(f => f.healthStatus === "Average").length,
+    Poor: farmsWithMappedStatus.filter(f => f.healthStatus === "Poor").length,
+  }}
+/>
           <TeamOverview users={users.slice(0, 5)} />
           <KnowledgeLinkCard />
         </div>
