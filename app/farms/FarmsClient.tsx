@@ -15,7 +15,7 @@ function formatDate(dateString: string) {
   return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-export default function FarmsClient({ farms }: { farms: any[] }) {
+export default function FarmsClient({ farms, users }: { farms: any[], users: any[] }) {
   const [filteredFarms, setFilteredFarms] = useState(farms)
 
   const handleFilterChange = (filters: {
@@ -59,6 +59,7 @@ export default function FarmsClient({ farms }: { farms: any[] }) {
           }
           title="Add New Farm"
           description="Create a new banana plantation"
+          users={users}
         />
       </div>
 

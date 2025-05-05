@@ -2,6 +2,7 @@ import { useParams, notFound } from "next/navigation"
 import { getFarmById } from "@/db/repositories/farm-repository"
 import { getPlotsByFarmId } from "@/db/repositories/plot-repository"
 import { getTasksByFarmId } from "@/db/repositories/task-repository"
+import { getAllUsers } from "@/db/repositories/user-repository"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -22,6 +23,7 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
 
   const plots = await getPlotsByFarmId(farmId)
   const tasks = await getTasksByFarmId(farmId)
+  const users = await getAllUsers()
 
   // Map health status for UI
   const mapHealthStatus = (status: string) => {
@@ -52,6 +54,14 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
         return ""
     }
   }
+
+  // Find the earliest established date from plots
+  const establishedDate = plots.length > 0
+    ? plots
+        .map((p) => p.dateEstablished)
+        .filter(Boolean)
+        .sort()[0]
+    : null;
 
   return (
     <div className="container px-4 py-6 md:px-6 md:py-8">
@@ -91,6 +101,7 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
               location: farmUI.location,
               healthStatus: farmUI.healthStatus,
             }}
+            users={users}
           />
         </div>
       </div>
@@ -105,6 +116,10 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
               <div>
                 <dt className="text-muted-foreground">Plots</dt>
                 <dd className="font-medium">{farmUI.plotCount}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Established</dt>
+                <dd className="font-medium">{establishedDate ? new Date(establishedDate).toLocaleDateString() : 'N/A'}</dd>
               </div>
             </dl>
           </CardContent>

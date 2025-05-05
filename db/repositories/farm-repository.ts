@@ -29,38 +29,58 @@ async function getFarmByIdDb(id: number): Promise<Farm | null> {
 
 async function createFarmDb(values: FarmFormValues): Promise<Farm> {
   try {
+    // Map region_code from location (first 3 letters, uppercased)
+    const regionCode = values.location && values.location.length >= 3
+      ? values.location.substring(0, 3).toUpperCase()
+      : null;
+    // Map health_status to DB enum (GOOD, AVERAGE, POOR)
+    let healthStatus: any = "AVERAGE";
+    if (values.healthStatus) {
+      if (values.healthStatus.toUpperCase() === "GOOD") healthStatus = "GOOD";
+      else if (values.healthStatus.toUpperCase() === "POOR") healthStatus = "POOR";
+      else healthStatus = "AVERAGE";
+    }
+    // For now, creator_id is omitted (no Team Leader field in form)
+    // TODO: Add creator_id/teamLeaderId when re-enabled in the form
     const farmData = {
       name: values.name,
       location: values.location,
-      area: values.area,
-      dateEstablished: values.dateEstablished,
-      healthStatus: values.healthStatus as any,
-      teamLeaderId: values.teamLeaderId ? Number.parseInt(values.teamLeaderId) : null,
-      plotCount: 0,
-    }
-
-    const result = await db.insert(farms).values(farmData).returning()
-    return farmDbToModel(result[0])
+      region_code: regionCode,
+      size: values.area?.toString(),
+      created_at: values.dateEstablished,
+      health_status: healthStatus,
+      group_code: values.group_code,
+      creator_id: values.teamLeaderId ? Number.parseInt(values.teamLeaderId) : null,
+      description: values.description || null,
+    };
+    const result = await db.insert(farms).values(farmData).returning();
+    return farmDbToModel(result[0]);
   } catch (error) {
-    console.error("Error creating farm in database:", error)
-    throw error
+    console.error("Error creating farm in database:", error);
+    throw error;
   }
 }
 
 async function updateFarmDb(id: number, values: FarmFormValues): Promise<Farm> {
   try {
+    // Map health_status to DB enum (GOOD, AVERAGE, POOR)
+    let healthStatus: any = "AVERAGE";
+    if (values.healthStatus) {
+      if (values.healthStatus.toUpperCase() === "GOOD") healthStatus = "GOOD";
+      else if (values.healthStatus.toUpperCase() === "POOR") healthStatus = "POOR";
+      else healthStatus = "AVERAGE";
+    }
     const farmData = {
       name: values.name,
       location: values.location,
-      area: values.area,
-      dateEstablished: values.dateEstablished,
-      healthStatus: values.healthStatus as any,
-      teamLeaderId: values.teamLeaderId ? Number.parseInt(values.teamLeaderId) : null,
-      updatedAt: new Date(),
+      size: values.area.toString(),
+      health_status: healthStatus,
+      group_code: values.group_code,
+      creator_id: values.teamLeaderId ? Number.parseInt(values.teamLeaderId) : null,
+      description: values.description || null,
+      updated_at: new Date(),
     }
-
     const result = await db.update(farms).set(farmData).where(eq(farms.id, id)).returning()
-
     return farmDbToModel(result[0])
   } catch (error) {
     console.error(`Error updating farm with id ${id} in database:`, error)
@@ -97,7 +117,7 @@ function createFarmMock(values: FarmFormValues): Farm {
     area: values.area,
     plotCount: 0,
     dateEstablished: values.dateEstablished.toISOString(),
-    healthStatus: values.healthStatus,
+    healthStatus: toHealthStatusEnum(values.healthStatus),
     teamLeaderId: values.teamLeaderId || "",
   }
 
@@ -120,7 +140,7 @@ function updateFarmMock(id: number, values: FarmFormValues): Farm {
     location: values.location,
     area: values.area,
     dateEstablished: values.dateEstablished.toISOString(),
-    healthStatus: values.healthStatus,
+    healthStatus: toHealthStatusEnum(values.healthStatus),
     teamLeaderId: values.teamLeaderId || "",
   }
 
@@ -150,12 +170,28 @@ function farmDbToModel(dbFarm: any): Farm {
     name: dbFarm.name,
     location: dbFarm.location,
     area: dbFarm.size !== undefined && dbFarm.size !== null && !isNaN(Number(dbFarm.size)) ? Number(dbFarm.size) : 0,
-    plotCount: dbFarm.plotCount,
-    dateEstablished: dbFarm.dateEstablished ? dbFarm.dateEstablished.toISOString() : "",
-    healthStatus: dbFarm.healthStatus,
-    teamLeaderId: dbFarm.teamLeaderId ? dbFarm.teamLeaderId.toString() : "",
-    group_code: dbFarm.group_code || "",
+    plotCount: dbFarm.plotCount !== undefined ? dbFarm.plotCount : 0,
+    healthStatus: dbFarm.health_status,
+    healthScore: dbFarm.health_score,
+    groupCode: dbFarm.group_code || "",
+    regionCode: dbFarm.region_code || "",
+    isActive: dbFarm.is_active,
+    creatorId: dbFarm.creator_id,
+    createdAt: dbFarm.created_at,
+    updatedAt: dbFarm.updated_at,
+    dateEstablished: dbFarm.created_at,
+    teamLeaderId: dbFarm.creator_id ? dbFarm.creator_id.toString() : "",
   }
+}
+
+function toHealthStatusEnum(val: string): "Good" | "Average" | "Poor" {
+  if (val === "Good" || val === "Average" || val === "Poor") return val
+  if (typeof val === "string") {
+    const v = val.toLowerCase()
+    if (v === "good") return "Good"
+    if (v === "poor") return "Poor"
+  }
+  return "Average"
 }
 
 // Export functions with fallback

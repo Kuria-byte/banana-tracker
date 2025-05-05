@@ -1,4 +1,3 @@
-"use client"
 import { useParams, notFound } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -16,6 +15,11 @@ export default async function FarmHealthPage({ params }: { params: { id: string 
   if (!farm) {
     notFound()
   }
+
+  // Get current month and year
+  const now = new Date()
+  const month = now.getMonth() + 1 // getMonth() is 0-based
+  const year = now.getFullYear()
 
   return (
     <div className="container px-4 py-6 md:px-6 md:py-8">
@@ -45,7 +49,7 @@ export default async function FarmHealthPage({ params }: { params: { id: string 
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
-        <FarmHealthSummary farmId={farmId.toString()} />
+        <FarmHealthSummary farmId={farmId.toString()} month={month} year={year} />
       </div>
 
       <Tabs defaultValue="history">

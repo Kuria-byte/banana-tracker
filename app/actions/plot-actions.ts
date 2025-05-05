@@ -139,3 +139,12 @@ export async function getPlotsByFarmId(farmId: string) {
     }
   }
 }
+
+export async function deletePlotAction(id: string) {
+  try {
+    const success = await deletePlot(Number(id));
+    return { success, message: success ? "Plot deleted" : "Failed to delete plot" };
+  } catch (e) {
+    return { success: false, message: "Error deleting plot" };
+  }
+}

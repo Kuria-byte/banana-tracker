@@ -2,6 +2,7 @@ import { getFarmCardsData } from "@/db/repositories/farm-plot-aggregate-reposito
 import FarmsClient from "./FarmsClient"
 import { stackServerApp } from "@/stack";
 import { redirect } from "next/navigation";
+import { getAllUsers } from "@/db/repositories/user-repository"
 
 export default async function FarmsPage() {
  // Server-side authentication check
@@ -11,8 +12,9 @@ export default async function FarmsPage() {
  }
 
   const farmsData = await getFarmCardsData();
+  const users = await getAllUsers();
 
   return (
-    <FarmsClient farms={farmsData} />
+    <FarmsClient farms={farmsData} users={users} />
   )
 }

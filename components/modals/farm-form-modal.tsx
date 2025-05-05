@@ -19,9 +19,10 @@ interface FarmFormModalProps {
   title: string
   description: string
   initialData?: Partial<FarmFormValues> & { id?: string }
+  users: any[]
 }
 
-export function FarmFormModal({ trigger, title, description, initialData }: FarmFormModalProps) {
+export function FarmFormModal({ trigger, title, description, initialData, users }: FarmFormModalProps) {
   const [open, setOpen] = useState(false)
 
   const handleSuccess = () => {
@@ -36,7 +37,7 @@ export function FarmFormModal({ trigger, title, description, initialData }: Farm
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <FarmForm initialData={initialData} onSuccess={handleSuccess} />
+        <FarmForm initialData={initialData} onSuccess={handleSuccess} users={users} />
       </DialogContent>
     </Dialog>
   )

@@ -23,6 +23,14 @@ export interface Farm {
   healthStatus: "Good" | "Average" | "Poor"
   teamLeaderId: string
   group_code?: string // Optional group code for farms
+  // New fields for DB parity
+  healthScore?: number
+  groupCode?: string
+  regionCode?: string
+  isActive?: boolean
+  creatorId?: string | number
+  createdAt?: string
+  updatedAt?: string
 }
 
 // Plot interface

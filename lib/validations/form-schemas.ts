@@ -2,21 +2,14 @@ import * as z from "zod"
 
 // Farm form schema
 export const farmFormSchema = z.object({
-  name: z.string().min(2, {
-    message: "Farm name must be at least 2 characters.",
-  }),
-  location: z.string().min(2, {
-    message: "Location must be at least 2 characters.",
-  }),
-  area: z.coerce.number().positive({
-    message: "Area must be a positive number.",
-  }),
-  dateEstablished: z.date({
-    required_error: "Please select a date.",
-  }),
+  name: z.string().min(1, "Farm name is required"),
+  location: z.string().min(1, "Location is required"),
+  area: z.number().min(0.01, "Area must be greater than 0"),
+  dateEstablished: z.date(),
   teamLeaderId: z.string().optional(),
-  healthStatus: z.enum(["Good", "Average", "Poor"]),
+  healthStatus: z.string(),
   description: z.string().optional(),
+  group_code: z.string().min(1, "Group code is required").max(8, "Group code must be at most 8 characters"),
 })
 
 export type FarmFormValues = z.infer<typeof farmFormSchema>

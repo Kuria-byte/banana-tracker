@@ -115,3 +115,12 @@ export async function deleteFarm(farmId: string) {
     }
   }
 }
+
+export async function deleteFarmAction(id: string) {
+  try {
+    const success = await deleteFarm(Number(id));
+    return { success, message: success ? "Farm deleted" : "Failed to delete farm" };
+  } catch (e) {
+    return { success: false, message: "Error deleting farm" };
+  }
+}

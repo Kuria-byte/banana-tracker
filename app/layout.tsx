@@ -9,6 +9,7 @@ import { MobileNav } from "@/components/mobile-nav"
 import { Header } from "@/components/header"
 import { QuickActions } from "@/components/quick-actions"
 import { AuthProvider } from "@/lib/auth/auth-context"
+import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -38,6 +39,7 @@ export default function RootLayout({
             </div>
           </ThemeProvider>
         </AuthProvider>
+        <Toaster />
       </StackTheme></StackProvider></body>
     </html>
   )

@@ -136,4 +136,48 @@
 
 ---
 
+## 9. Common Pitfall: Mixing Client and Server Logic in Next.js (App Router)
+
+### The Problem
+- **Mixing client and server logic** (e.g., importing and calling server/database code in Client Components or in useEffect) can cause runtime errors, such as:
+  - `Error: DATABASE_URL environment variable is not set`
+  - This happens because environment variables and server-only code are not available in the browser.
+- In our project, this occurred when a Client Component (`FarmForm`) tried to fetch users directly from the database using a repository function, causing the database code to run in the browser.
+
+### How to Avoid This
+- **Never import or call server/database code in Client Components.**
+- **Always fetch data in Server Components or server actions, and pass it as props to Client Components.**
+- For forms or modals that need server data (e.g., user lists), fetch the data in the parent Server Component and pass it down.
+- Use API routes or server actions for dynamic client-side fetching if needed, but prefer server-side data fetching for initial render.
+
+### Best Practices for Component & Page Structure
+- **Server Components**: Fetch all required data (DB, API, etc.) and pass to child components as props.
+- **Client Components**: Use only for interactivity, UI state, and form handling. Receive all data via props.
+- **Modals/Forms**: If they need server data, require it as a prop and let the parent fetch it.
+- **Never access environment variables or database code in the browser.**
+
+### Example Solution
+```tsx
+// Server Component (page or parent)
+import { getAllUsers } from "@/db/repositories/user-repository";
+import { FarmForm } from "@/components/forms/farm-form";
+
+export default async function FarmPage() {
+  const users = await getAllUsers(); // server-side
+  return <FarmForm users={users} />;
+}
+
+// Client Component (form)
+export function FarmForm({ users }) {
+  // Use users prop directly
+}
+```
+
+### Summary
+- **Always keep server and client logic separate.**
+- **Fetch data on the server, pass as props to the client.**
+- This avoids environment variable errors and ensures secure, maintainable code.
+
+---
+
 **This document should be versioned and updated as the codebase evolves.**

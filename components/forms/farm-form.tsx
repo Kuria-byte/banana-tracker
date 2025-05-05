@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CalendarIcon, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -18,15 +19,17 @@ import { toast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
 import { farmFormSchema, type FarmFormValues } from "@/lib/validations/form-schemas"
 import { createFarm, updateFarm } from "@/app/actions/farm-actions"
-import { users } from "@/lib/mock-data"
 
 interface FarmFormProps {
   initialData?: Partial<FarmFormValues> & { id?: string }
   onSuccess?: () => void
+  users?: any[]
 }
 
-export function FarmForm({ initialData, onSuccess }: FarmFormProps) {
+export function FarmForm({ initialData, onSuccess, users = [] }: FarmFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [createdFarmId, setCreatedFarmId] = useState<string | null>(null)
   const router = useRouter()
   const isEditing = !!initialData?.id
 
@@ -37,8 +40,9 @@ export function FarmForm({ initialData, onSuccess }: FarmFormProps) {
     area: initialData?.area || undefined,
     dateEstablished: initialData?.dateEstablished ? new Date(initialData.dateEstablished) : new Date(),
     teamLeaderId: initialData?.teamLeaderId || "",
-    healthStatus: initialData?.healthStatus || "Good",
+    healthStatus: initialData?.healthStatus || "Average",
     description: initialData?.description || "",
+    group_code: initialData?.group_code || "",
   }
 
   const form = useForm<FarmFormValues>({
@@ -46,22 +50,30 @@ export function FarmForm({ initialData, onSuccess }: FarmFormProps) {
     defaultValues,
   })
 
+  // Compute region code preview from location
+  const regionCode = useMemo(() => {
+    const loc = form.watch("location")
+    return loc && loc.length >= 3 ? loc.substring(0, 3).toUpperCase() : "---"
+  }, [form.watch("location")])
+
   async function onSubmit(values: FarmFormValues) {
     setIsSubmitting(true)
     try {
       const result = isEditing && initialData?.id ? await updateFarm(initialData.id, values) : await createFarm(values)
 
       if (result.success) {
+        setSuccess(true)
+        setCreatedFarmId(result.farm?.id ?? null)
         toast({
           title: isEditing ? "Farm updated" : "Farm created",
           description: result.message,
+          action: result.farm?.id ? (
+            <Link href={`/farms/${result.farm.id}/plots/new`} className="ml-2 underline text-primary">
+              Add Plot
+            </Link>
+          ) : undefined,
         })
-
-        if (onSuccess) {
-          onSuccess()
-        } else {
-          router.push("/farms")
-        }
+        // No auto-navigation
       } else {
         toast({
           title: "Error",
@@ -78,6 +90,26 @@ export function FarmForm({ initialData, onSuccess }: FarmFormProps) {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (success) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="bg-green-100 border border-green-300 rounded-lg p-6 text-center max-w-md w-full">
+          <h2 className="text-2xl font-bold mb-2">{isEditing ? "Farm updated!" : "Farm created!"}</h2>
+          <p className="mb-4">{isEditing ? "The farm details have been updated successfully." : "Your new farm has been created successfully."}</p>
+          {createdFarmId && (
+            <Link href={`/farms/${createdFarmId}/plots/new`} className="inline-block mb-2 text-primary underline">
+              Add Plot to this Farm
+            </Link>
+          )}
+          <div className="flex gap-4 justify-center mt-4">
+            <Button onClick={() => router.push("/farms")}>Go to Farms</Button>
+            <Button variant="outline" onClick={() => setSuccess(false)}>Create Another</Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -108,6 +140,43 @@ export function FarmForm({ initialData, onSuccess }: FarmFormProps) {
                 <Input placeholder="Enter farm location" {...field} />
               </FormControl>
               <FormDescription>The physical location of your farm</FormDescription>
+              <div className="text-xs text-muted-foreground mt-1">
+                <span className="font-medium">Region Code Preview:</span> {regionCode}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="teamLeaderId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Team Leader</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={users.length === 0 ? "No users available" : "Select a team leader"} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {users.length === 0 ? (
+                    <SelectItem value="" disabled>
+                      No users available
+                    </SelectItem>
+                  ) : (
+                    users
+                      .filter((user) => typeof user.id === "string" && user.id.trim() !== "" && user.name)
+                      .map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name}
+                        </SelectItem>
+                      ))
+                  )}
+                </SelectContent>
+              </Select>
+              <FormDescription>The team leader responsible for this farm</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -173,40 +242,11 @@ export function FarmForm({ initialData, onSuccess }: FarmFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="teamLeaderId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Team Leader</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a team leader" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="">None</SelectItem>
-                    {users
-                      .filter((user) => user.role === "Team Leader")
-                      .map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-                <FormDescription>The team leader responsible for this farm</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
             name="healthStatus"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Health Status</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select health status" />
@@ -235,6 +275,21 @@ export function FarmForm({ initialData, onSuccess }: FarmFormProps) {
                 <Textarea placeholder="Enter farm description" className="resize-none min-h-[100px]" {...field} />
               </FormControl>
               <FormDescription>Additional details about your farm</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="group_code"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Group Code</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter group code (max 8 chars)" maxLength={8} {...field} />
+              </FormControl>
+              <FormDescription>Short code for the farm group (required, max 8 characters)</FormDescription>
               <FormMessage />
             </FormItem>
           )}
