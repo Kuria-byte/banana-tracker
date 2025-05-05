@@ -1,33 +1,20 @@
 "use client"
-import { useParams } from "next/navigation"
+import { useParams, notFound } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Plus } from "lucide-react"
 import Link from "next/link"
-import { getFarmById } from "@/lib/mock-data"
+import { getFarmById } from "@/db/repositories/farm-repository"
 import { FarmHealthSummary } from "@/components/farms/farm-health-summary"
 import { FarmHealthHistory } from "@/components/farms/farm-health-history"
 import { FarmHealthScoringModal } from "@/components/modals/farm-health-scoring-modal"
 
-export default function FarmHealthPage() {
-  const params = useParams()
-  const farmId = params.id as string
-  const farm = getFarmById(farmId)
+export default async function FarmHealthPage({ params }: { params: { id: string } }) {
+  const farmId = Number(params.id)
+  const farm = await getFarmById(farmId)
 
   if (!farm) {
-    return (
-      <div className="container px-4 py-6 md:px-6 md:py-8">
-        <div className="text-center py-12">
-          <h1 className="text-2xl font-bold mb-4">Farm not found</h1>
-          <Button asChild>
-            <Link href="/farms">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Farms
-            </Link>
-          </Button>
-        </div>
-      </div>
-    )
+    notFound()
   }
 
   return (
@@ -46,7 +33,7 @@ export default function FarmHealthPage() {
             <p className="text-muted-foreground">Monitor and assess the health of your farm</p>
           </div>
           <FarmHealthScoringModal
-            farmId={farmId}
+            farmId={farmId.toString()}
             trigger={
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -58,7 +45,7 @@ export default function FarmHealthPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
-        <FarmHealthSummary farmId={farmId} />
+        <FarmHealthSummary farmId={farmId.toString()} />
       </div>
 
       <Tabs defaultValue="history">
@@ -68,7 +55,7 @@ export default function FarmHealthPage() {
         </TabsList>
 
         <TabsContent value="history">
-          <FarmHealthHistory farmId={farmId} />
+          <FarmHealthHistory farmId={farmId.toString()} />
         </TabsContent>
 
         <TabsContent value="parameters">

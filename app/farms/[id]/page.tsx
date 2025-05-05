@@ -1,7 +1,7 @@
-"use client"
-
-import { useParams } from "next/navigation"
-import { getFarmById, getPlotsByFarmId, getUserById, getTasksByFarmId } from "@/lib/mock-data"
+import { useParams, notFound } from "next/navigation"
+import { getFarmById } from "@/db/repositories/farm-repository"
+import { getPlotsByFarmId } from "@/db/repositories/plot-repository"
+import { getTasksByFarmId } from "@/db/repositories/task-repository"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -15,33 +15,33 @@ import { TaskFormModal } from "@/components/modals/task-form-modal"
 import { GrowthFormModal } from "@/components/modals/growth-form-modal"
 import { FarmHealthScoringModal } from "@/components/modals/farm-health-scoring-modal"
 
-export default function FarmDetailPage() {
-  const params = useParams()
-  const farmId = params.id as string
+export default async function FarmDetailPage({ params }: { params: { id: string } }) {
+  const farmId = Number(params.id)
+  const farm = await getFarmById(farmId)
+  if (!farm) notFound()
 
-  const farm = getFarmById(farmId)
-  const plots = getPlotsByFarmId(farmId)
-  const teamLeader = farm ? getUserById(farm.teamLeaderId) : undefined
-  const tasks = getTasksByFarmId(farmId)
+  const plots = await getPlotsByFarmId(farmId)
+  const tasks = await getTasksByFarmId(farmId)
 
-  if (!farm) {
-    return (
-      <div className="container px-4 py-6 md:px-6 md:py-8">
-        <div className="text-center py-12">
-          <h1 className="text-2xl font-bold mb-4">Farm not found</h1>
-          <Button asChild>
-            <Link href="/farms">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Farms
-            </Link>
-          </Button>
-        </div>
-      </div>
-    )
+  // Map health status for UI
+  const mapHealthStatus = (status: string) => {
+    switch (status) {
+      case "GOOD": return "Good"
+      case "AVERAGE": return "Average"
+      case "POOR": return "Poor"
+      default: return status
+    }
+  }
+
+  // Map DB fields to UI fields
+  const farmUI = {
+    ...farm,
+    healthStatus: farm.healthStatus as 'Good' | 'Average' | 'Poor',
+    plotCount: plots.length,
   }
 
   const getHealthStatusColor = () => {
-    switch (farm.healthStatus) {
+    switch (farmUI.healthStatus) {
       case "Good":
         return "bg-green-100 text-green-800 hover:bg-green-100"
       case "Average":
@@ -66,14 +66,14 @@ export default function FarmDetailPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold tracking-tight">{farm.name}</h1>
+              <h1 className="text-3xl font-bold tracking-tight">{farmUI.name}</h1>
               <Badge variant="outline" className={`${getHealthStatusColor()} font-normal`}>
-                {farm.healthStatus}
+                {farmUI.healthStatus}
               </Badge>
             </div>
             <div className="flex items-center text-muted-foreground mt-1">
               <MapPin className="mr-1 h-4 w-4" />
-              {farm.location}
+              {farmUI.location}
             </div>
           </div>
           <FarmFormModal
@@ -86,13 +86,10 @@ export default function FarmDetailPage() {
             title="Edit Farm"
             description="Update farm details"
             initialData={{
-              id: farm.id,
-              name: farm.name,
-              location: farm.location,
-              area: farm.area,
-              dateEstablished: new Date(farm.dateEstablished),
-              teamLeaderId: farm.teamLeaderId,
-              healthStatus: farm.healthStatus,
+              id: farmUI.id,
+              name: farmUI.name,
+              location: farmUI.location,
+              healthStatus: farmUI.healthStatus,
             }}
           />
         </div>
@@ -106,35 +103,10 @@ export default function FarmDetailPage() {
           <CardContent>
             <dl className="grid grid-cols-2 gap-2 text-sm">
               <div>
-                <dt className="text-muted-foreground">Area</dt>
-                <dd className="font-medium">{farm.area} acres</dd>
-              </div>
-              <div>
                 <dt className="text-muted-foreground">Plots</dt>
-                <dd className="font-medium">{farm.plotCount}</dd>
-              </div>
-              <div className="col-span-2">
-                <dt className="text-muted-foreground">Established</dt>
-                <dd className="font-medium">{new Date(farm.dateEstablished).toLocaleDateString()}</dd>
+                <dd className="font-medium">{farmUI.plotCount}</dd>
               </div>
             </dl>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Team Leader</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
-                <User className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">{teamLeader?.name || "Not assigned"}</p>
-                <p className="text-xs text-muted-foreground">{teamLeader?.phone || ""}</p>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
@@ -185,7 +157,7 @@ export default function FarmDetailPage() {
               }
               title="Add New Plot"
               description="Create a new plot for this farm"
-              farmId={farmId}
+              farmId={farmId.toString()}
             />
           </div>
 
@@ -196,7 +168,7 @@ export default function FarmDetailPage() {
                 trigger={<Button className="mt-4">Add Your First Plot</Button>}
                 title="Add New Plot"
                 description="Create your first plot for this farm"
-                farmId={farmId}
+                farmId={farmId.toString()}
               />
             </div>
           ) : (
@@ -258,7 +230,7 @@ export default function FarmDetailPage() {
               }
               title="Add New Task"
               description="Create a new task for this farm"
-              farmId={farmId}
+              farmId={farmId.toString()}
             />
           </div>
 
@@ -269,7 +241,7 @@ export default function FarmDetailPage() {
                 trigger={<Button className="mt-4">Create Your First Task</Button>}
                 title="Add New Task"
                 description="Create your first task for this farm"
-                farmId={farmId}
+                farmId={farmId.toString()}
               />
             </div>
           ) : (
@@ -285,12 +257,7 @@ export default function FarmDetailPage() {
           <div className="text-center py-12 border rounded-lg">
             <h2 className="text-xl font-semibold mb-2">Growth Tracking</h2>
             <p className="text-muted-foreground mb-4">Track the growth stages of your banana plants</p>
-            <GrowthFormModal
-              trigger={<Button>Set Up Growth Tracking</Button>}
-              title="Record Growth Stage"
-              description="Record a growth stage for a banana plant"
-              initialData={{ farmId }}
-            />
+            <GrowthFormModal trigger={<Button>Set Up Growth Tracking</Button>} />
           </div>
         </TabsContent>
         <TabsContent value="health">
@@ -305,7 +272,7 @@ export default function FarmDetailPage() {
             <p className="text-muted-foreground mb-4">
               Track and assess the health of your farm using our comprehensive scoring system
             </p>
-            <FarmHealthScoringModal farmId={farmId} trigger={<Button>Record Health Assessment</Button>} />
+            <FarmHealthScoringModal farmId={farmId.toString()} trigger={<Button>Record Health Assessment</Button>} />
           </div>
         </TabsContent>
       </Tabs>
