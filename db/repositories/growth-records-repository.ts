@@ -4,9 +4,14 @@ import { eq, sql } from "drizzle-orm"
 
 // Fetch all growth records (optionally by farm/plot)
 export async function getAllGrowthRecords({ farmId, plotId } = {} as { farmId?: number; plotId?: number }) {
+  let conditions = []
+  if (farmId) conditions.push(eq(growthRecords.farmId, farmId))
+  if (plotId) conditions.push(eq(growthRecords.plotId, plotId))
   let query = db.select().from(growthRecords)
-  if (farmId) query = query.where(eq(growthRecords.farmId, farmId))
-  if (plotId) query = query.where(eq(growthRecords.plotId, plotId))
+  if (conditions.length > 0) {
+    // @ts-ignore
+    query = query.where(conditions.length === 1 ? conditions[0] : { and: conditions })
+  }
   return await query
 }
 
@@ -78,4 +83,41 @@ export async function getUiHealthStatusDistribution() {
     count: counts[status],
     percent: total ? Math.round((counts[status] / total) * 100) : 0,
   }))
+}
+
+// When creating or updating growth records, include rowNumber, holeNumber, isMainPlant, parentPlantId
+// Example for createGrowthRecord:
+export async function createGrowthRecord(values: any): Promise<any> {
+  const recordData = {
+    farmId: values.farmId,
+    plotId: values.plotId,
+    recordDate: values.recordDate ?? new Date(),
+    stage: values.stage,
+    notes: values.notes,
+    metrics: values.metrics,
+    creatorId: values.creatorId,
+    rowNumber: values.rowNumber,
+    holeNumber: values.holeNumber,
+    isMainPlant: values.isMainPlant,
+    parentPlantId: values.parentPlantId,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+  const result = await db.insert(growthRecords).values(recordData).returning()
+  return Array.isArray(result) ? result[0] : result
+}
+
+export async function updateGrowthRecord(id: number, values: any): Promise<any> {
+  const recordData = {
+    stage: values.stage,
+    notes: values.notes,
+    metrics: values.metrics,
+    rowNumber: values.rowNumber,
+    holeNumber: values.holeNumber,
+    isMainPlant: values.isMainPlant,
+    parentPlantId: values.parentPlantId,
+    updatedAt: new Date(),
+  }
+  const result = await db.update(growthRecords).set(recordData).where(eq(growthRecords.id, id)).returning()
+  return Array.isArray(result) ? result[0] : result
 } 

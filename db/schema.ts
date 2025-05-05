@@ -69,6 +69,24 @@ export const plots = pgTable("plots", {
   holes: integer("holes").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  rowCount: integer("row_count").default(0),
+  holeCount: integer("hole_count").default(0),
+  plantCount: integer("plant_count").default(0),
+  layoutStructure: json("layout_structure"),
+})
+
+// Rows table
+export const rows = pgTable("rows", {
+  id: serial("id").primaryKey(),
+  plotId: integer("plot_id").references(() => plots.id).notNull(),
+  rowNumber: integer("row_number").notNull(),
+  length: decimal("length"),
+  spacing: decimal("spacing"),
+  holeCount: integer("hole_count").default(0),
+  holesData: json("holes_data"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
 // Tasks table
@@ -97,8 +115,8 @@ export const taskComments = pgTable("task_comments", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
-// Growth records
-export const growthRecords = pgTable("growth_records", {
+// Enhance growth records for better plant tracking
+export const growthRecords: any = pgTable("growth_records", {
   id: serial("id").primaryKey(),
   farmId: integer("farm_id").references(() => farms.id).notNull(),
   plotId: integer("plot_id").references(() => plots.id),
@@ -109,6 +127,11 @@ export const growthRecords = pgTable("growth_records", {
   creatorId: integer("creator_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  // New fields for plant tracking
+  rowNumber: integer("row_number"),
+  holeNumber: integer("hole_number"),
+  isMainPlant: boolean("is_main_plant").default(true),
+  parentPlantId: integer("parent_plant_id").references(() => growthRecords.id),
 })
 
 // Farm inspections

@@ -43,6 +43,10 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
     dateEstablished: initialData?.dateEstablished ? new Date(initialData.dateEstablished) : new Date(),
     healthStatus: initialData?.healthStatus || "Good",
     description: initialData?.description || "",
+    rowCount: initialData?.rowCount ?? 0,
+    holeCount: initialData?.holeCount ?? 0,
+    plantCount: initialData?.plantCount ?? 0,
+    layoutStructure: initialData?.layoutStructure ?? "",
   }
 
   const form = useForm<PlotFormValues>({
@@ -254,6 +258,79 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
                 <Textarea placeholder="Enter plot description" className="resize-none min-h-[100px]" {...field} />
               </FormControl>
               <FormDescription>Additional details about this plot</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField
+            control={form.control}
+            name="rowCount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Row Count</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="Number of rows" {...field} />
+                </FormControl>
+                <FormDescription>Total number of rows in this plot</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="holeCount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Hole Count</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="Number of holes" {...field} />
+                </FormControl>
+                <FormDescription>Total number of holes in this plot</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="plantCount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Plant Count</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="Number of plants" {...field} />
+                </FormControl>
+                <FormDescription>Total number of plants in this plot</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <FormField
+          control={form.control}
+          name="layoutStructure"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Layout Structure (JSON)</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Paste layout structure as JSON (optional)"
+                  className="resize-none min-h-[60px]"
+                  {...field}
+                  value={typeof field.value === "string" ? field.value : field.value ? JSON.stringify(field.value, null, 2) : ""}
+                  onChange={e => {
+                    const val = e.target.value
+                    try {
+                      // Try to parse as JSON, fallback to string
+                      field.onChange(val.trim() ? JSON.parse(val) : "")
+                    } catch {
+                      field.onChange(val)
+                    }
+                  }}
+                />
+              </FormControl>
+              <FormDescription>Optional: JSON describing the plot layout (rows, holes, etc.)</FormDescription>
               <FormMessage />
             </FormItem>
           )}

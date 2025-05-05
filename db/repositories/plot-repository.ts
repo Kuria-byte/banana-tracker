@@ -1,5 +1,5 @@
 import { db } from "../client"
-import { plots } from "../schema"
+import { plots, rows } from "../schema"
 import { eq } from "drizzle-orm"
 import type { Plot } from "@/lib/mock-data"
 import type { PlotFormValues } from "@/lib/validations/form-schemas"
@@ -44,7 +44,10 @@ export async function createPlot(values: PlotFormValues): Promise<Plot> {
       plantedDate: (values as any).plantedDate ?? values.dateEstablished,
       healthStatus: values.healthStatus,
       holes: (values as any).holes ?? 0,
-      rowCount: 0,
+      rowCount: values.rowCount ?? 0,
+      holeCount: values.holeCount ?? 0,
+      plantCount: values.plantCount ?? 0,
+      layoutStructure: values.layoutStructure ?? null,
     }
 
     const result = await db.insert(plots).values(plotData).returning()
@@ -68,6 +71,10 @@ export async function updatePlot(id: number, values: PlotFormValues): Promise<Pl
       plantedDate: (values as any).plantedDate ?? values.dateEstablished,
       healthStatus: values.healthStatus,
       holes: (values as any).holes ?? 0,
+      rowCount: values.rowCount ?? 0,
+      holeCount: values.holeCount ?? 0,
+      plantCount: values.plantCount ?? 0,
+      layoutStructure: values.layoutStructure ?? null,
       updatedAt: new Date(),
     }
 
@@ -100,6 +107,26 @@ export async function deletePlot(id: number): Promise<boolean> {
   }
 }
 
+// CRUD for rows table
+export async function getRowsByPlotId(plotId: number) {
+  return await db.select().from(rows).where(eq(rows.plotId, plotId))
+}
+
+export async function createRow(rowData: any) {
+  const result = await db.insert(rows).values(rowData).returning()
+  return result[0]
+}
+
+export async function updateRow(id: number, rowData: any) {
+  const result = await db.update(rows).set(rowData).where(eq(rows.id, id)).returning()
+  return result[0]
+}
+
+export async function deleteRow(id: number) {
+  const result = await db.delete(rows).where(eq(rows.id, id)).returning({ id: rows.id })
+  return result.length > 0
+}
+
 // Helper function to update a farm's plot count
 async function updateFarmPlotCount(farmId: number): Promise<void> {
   try {
@@ -125,6 +152,9 @@ function plotDbToModel(dbPlot: any): Plot {
     soilType: dbPlot.soilType,
     dateEstablished: dbPlot.plantedDate ? dbPlot.plantedDate.toISOString() : "",
     rowCount: dbPlot.rowCount ?? 0,
+    holeCount: dbPlot.holeCount ?? 0,
+    plantCount: dbPlot.plantCount ?? 0,
+    layoutStructure: dbPlot.layoutStructure ?? null,
     healthStatus: dbPlot.healthStatus,
     holes: dbPlot.holes !== null && dbPlot.holes !== undefined ? Number(dbPlot.holes) : 0,
   }

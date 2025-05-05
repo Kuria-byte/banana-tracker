@@ -42,6 +42,9 @@ export interface Plot {
   soilType: string
   dateEstablished: string
   rowCount: number
+  holeCount?: number
+  plantCount?: number
+  layoutStructure?: any
   healthStatus: "Good" | "Average" | "Poor"
   holes?: number // Optional holes property
 }

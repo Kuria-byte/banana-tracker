@@ -33,6 +33,10 @@ export const plotFormSchema = z.object({
   }),
   healthStatus: z.enum(["Good", "Average", "Poor"]),
   description: z.string().optional(),
+  rowCount: z.coerce.number().int().min(0).optional(),
+  holeCount: z.coerce.number().int().min(0).optional(),
+  plantCount: z.coerce.number().int().min(0).optional(),
+  layoutStructure: z.union([z.string(), z.record(z.any())]).optional(),
 })
 
 export type PlotFormValues = z.infer<typeof plotFormSchema>
