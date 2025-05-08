@@ -29,6 +29,36 @@ interface PlotFormProps {
   onSuccess?: () => void
 }
 
+// Utility to auto-generate layout structure
+function generateLayoutStructure(rowCount: number, holeCount: number) {
+  if (!rowCount || !holeCount) return [];
+  const holesPerRow = Math.ceil(holeCount / rowCount);
+  let holesLeft = holeCount;
+  const layout = [];
+  let holeNumber = 1;
+  for (let row = 1; row <= rowCount; row++) {
+    const holesInThisRow = Math.min(holesPerRow, holesLeft);
+    const holes = [];
+    for (let h = 0; h < holesInThisRow; h++) {
+      holes.push({
+        holeNumber: holeNumber,
+        status: 'EMPTY',
+        rowNumber: row,
+        plantHealth: 'Healthy',
+      });
+      holeNumber++;
+    }
+    layout.push({
+      rowNumber: row,
+      length: 0,
+      spacing: 0,
+      holes,
+    });
+    holesLeft -= holesInThisRow;
+  }
+  return layout;
+}
+
 export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
@@ -43,10 +73,10 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
     dateEstablished: initialData?.dateEstablished ? new Date(initialData.dateEstablished) : new Date(),
     healthStatus: initialData?.healthStatus || "Good",
     description: initialData?.description || "",
-    rowCount: initialData?.rowCount ?? 0,
-    holeCount: initialData?.holeCount ?? 0,
-    plantCount: initialData?.plantCount ?? 0,
-    layoutStructure: initialData?.layoutStructure ?? "",
+    rowCount: typeof initialData?.rowCount === 'number' ? initialData.rowCount : 0,
+    holeCount: typeof initialData?.holeCount === 'number' ? initialData.holeCount : 0,
+    plantCount: typeof initialData?.plantCount === 'number' ? initialData.plantCount : 0,
+    layoutStructure: Array.isArray(initialData?.layoutStructure) ? initialData.layoutStructure : [],
   }
 
   const form = useForm<PlotFormValues>({
@@ -61,10 +91,23 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
     }
   }, [farmId, form])
 
+  // Auto-generate layoutStructure when rowCount or holeCount changes
+  useEffect(() => {
+    const rowCountRaw = form.watch('rowCount');
+    const holeCountRaw = form.watch('holeCount');
+    const rowCount = typeof rowCountRaw === 'number' && !isNaN(rowCountRaw) ? rowCountRaw : 0;
+    const holeCount = typeof holeCountRaw === 'number' && !isNaN(holeCountRaw) ? holeCountRaw : 0;
+    if (rowCount > 0 && holeCount > 0) {
+      const layout = generateLayoutStructure(rowCount, holeCount);
+      form.setValue('layoutStructure', layout);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.watch('rowCount'), form.watch('holeCount')]);
+
   async function onSubmit(values: PlotFormValues) {
     setIsSubmitting(true)
     try {
-      const result = isEditing && initialData?.id ? await updatePlot(initialData.id, values) : await addPlot(values)
+      const result = isEditing && initialData?.id ? await updatePlot(Number(initialData.id), values) : await addPlot(values)
 
       if (result.success) {
         toast({
@@ -307,34 +350,21 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
             )}
           />
         </div>
-        <FormField
-          control={form.control}
-          name="layoutStructure"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Layout Structure (JSON)</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Paste layout structure as JSON (optional)"
-                  className="resize-none min-h-[60px]"
-                  {...field}
-                  value={typeof field.value === "string" ? field.value : field.value ? JSON.stringify(field.value, null, 2) : ""}
-                  onChange={e => {
-                    const val = e.target.value
-                    try {
-                      // Try to parse as JSON, fallback to string
-                      field.onChange(val.trim() ? JSON.parse(val) : "")
-                    } catch {
-                      field.onChange(val)
-                    }
-                  }}
-                />
-              </FormControl>
-              <FormDescription>Optional: JSON describing the plot layout (rows, holes, etc.)</FormDescription>
-              <FormMessage />
-            </FormItem>
+        {/* Layout preview */}
+        {/* <div className="border rounded p-4 bg-gray-50 mt-4">
+          <h3 className="font-semibold mb-2">Layout Preview</h3>
+          {Array.isArray(form.watch('layoutStructure')) && form.watch('layoutStructure').length > 0 ? (
+            <ul className="text-xs max-h-40 overflow-auto">
+              {(form.watch('layoutStructure') as Array<{ rowNumber: number; holes: any[] }>).map((row, i) => (
+                <li key={i}>
+                  Row {row.rowNumber}: {Array.isArray(row.holes) ? row.holes.length : 0} holes
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <span className="text-gray-400">No layout generated yet.</span>
           )}
-        />
+        </div> */}
 
         <div className="flex justify-end gap-4">
           <Button type="button" variant="outline" onClick={onSuccess} disabled={isSubmitting}>

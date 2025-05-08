@@ -1,4 +1,4 @@
-# Banana Tracker: Codebase Architecture & Data Flow Analysis (2024 Update)
+# Banana Tracker: Codebase Architecture & Data Flow Analysis (2025 Update)
 
 ## 1. High-Level Architecture
 
@@ -6,7 +6,7 @@
 - **Frontend:** Next.js (App Router), React, TypeScript, Tailwind CSS, shadcn/ui
 - **Backend:** Next.js Server Actions, Drizzle ORM, Neon PostgreSQL (integration in progress)
 - **Data Layer:** Repository pattern with fallback to mock data, Zod validation schemas
-- **Authentication:** Stack Auth (integration in progress), mock auth for now
+- **Authentication:** Stack Auth (integration in progress)
 
 **Key Patterns:**
 - **Repository Pattern:** All data access (DB or mock) is abstracted in `/db/repositories`
@@ -82,22 +82,25 @@
 
 ---
 
-## 5. Current State & Gaps
+## 5. Row & Holes Management (2025 Update)
 
-### **Progress**
-- **DB Integration:** Most repositories now attempt real DB access first, with mock fallback.
-- **Server Actions:** All major entities use server actions for CRUD.
-- **UI:** Highly modular, with clear separation of concerns and strong TypeScript typing.
-- **Authentication:** Stack Auth integration started, but not fully enforced.
+### **RowForm & Holes Generation**
+- The `RowForm` component now auto-generates a type-safe `holes` array based on the user-specified `holeCount` and `rowNumber`.
+- Each hole is initialized with a unique `holeNumber`, the correct `rowNumber`, and default status/health.
+- On form submission, a complete `RowData` object (including the generated `holes` array) is sent to the parent.
+- This ensures all rows added or edited are fully compatible with the plot's layout structure and the database schema.
 
-### **Gaps & Improvement Areas**
-- **Full DB Migration:** Some features (especially tasks, growth, and health) still rely on mock data for fallback. Complete the transition to DB for all entities.
-- **Error Handling:** Improve error boundaries and user feedback for failed operations.
-- **Data Consistency:** Ensure all data transformations (DB → model → UI) are type-safe and consistent.
-- **Testing:** Add unit and integration tests for repositories, server actions, and critical UI flows.
-- **Performance:** Implement pagination, loading states, and optimize large data queries.
-- **Authentication & Authorization:** Enforce real auth and role-based access throughout server actions and UI.
-- **Documentation:** Expand code comments and API docs, especially for complex data flows and business logic.
+### **RowClient UI/UX**
+- The `RowClient` component now:
+  - Automatically selects the first row if available.
+  - Displays a list of all rows for the plot, allowing the user to select and view details for any row.
+  - Shows a visual and list view for row and hole management, with robust handling for empty or missing data.
+  - Provides clear feedback and interactive controls for row and hole management.
+
+### **Data Consistency**
+- All row and hole data is type-safe and validated at every step (form, repository, DB).
+- The UI and backend are robust to edge cases (e.g., 0 holes, missing rows).
+- The architecture supports easy extension for row/hole editing, visualization, and advanced management features.
 
 ---
 

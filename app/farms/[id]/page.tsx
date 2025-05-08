@@ -4,7 +4,7 @@ import { getPlotsByFarmId } from "@/db/repositories/plot-repository"
 import { getTasksByFarmId } from "@/db/repositories/task-repository"
 import { getAllUsers } from "@/db/repositories/user-repository"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { CalendarDays, Edit, MapPin, User, ArrowLeft, Leaf, LayoutGrid, Plus, Activity } from "lucide-react"
@@ -58,7 +58,7 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
   // Find the earliest established date from plots
   const establishedDate = plots.length > 0
     ? plots
-        .map((p) => p.dateEstablished)
+        .map((p) => p.createdAt)
         .filter(Boolean)
         .sort()[0]
     : null;
@@ -196,14 +196,14 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
                       <Badge
                         variant="outline"
                         className={`font-normal ${
-                          plot.healthStatus === "Good"
+                          plot.status === "Good"
                             ? "bg-green-100 text-green-800"
-                            : plot.healthStatus === "Average"
+                            : plot.status === "Average"
                               ? "bg-yellow-100 text-yellow-800"
                               : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {plot.healthStatus}
+                        {plot.status}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -223,10 +223,20 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
                       </div>
                       <div>
                         <p className="text-muted-foreground">Established</p>
-                        <p className="font-medium">{new Date(plot.dateEstablished).toLocaleDateString()}</p>
+                        <p className="font-medium">{new Date(plot.createdAt).toLocaleDateString()}</p>
                       </div>
                     </div>
+                  
+   
                   </CardContent>
+                  <CardFooter className="flex flex-col gap-2">
+                    {/* <Button asChild variant="outline" className="w-full">
+                      <Link href={`/farms/${farmId}/plots/${plot.id}`}>View Plot Details</Link>
+                    </Button> */}
+                    <Button asChild className="w-full">
+                      <Link href={`/farms/${farmId}/plots/${plot.id}/rows`}>Manage Rows</Link>
+                    </Button>
+                  </CardFooter>
                 </Card>
               ))}
             </div>

@@ -70,9 +70,9 @@ export const plots = pgTable("plots", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   rowCount: integer("row_count").default(0),
-  holeCount: integer("hole_count").default(0),
   plantCount: integer("plant_count").default(0),
   layoutStructure: json("layout_structure"),
+  soilType: varchar("soil_type", { length: 64 }),
 })
 
 // Rows table

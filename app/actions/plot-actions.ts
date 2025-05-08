@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 import type { PlotFormValues } from "@/lib/validations/form-schemas"
-import * as plotRepository from "@/db/repositories/plot-repository-fallback"
+import * as plotRepository from "@/db/repositories/plot-repository"
+import { updatePlotLayout } from "@/db/repositories/plot-repository"
+import type { RowData, HoleData } from "@/lib/types/plot"
 
 export async function addPlot(values: PlotFormValues) {
   try {
@@ -27,7 +29,7 @@ export async function addPlot(values: PlotFormValues) {
   }
 }
 
-export async function updatePlot(plotId: string, values: PlotFormValues) {
+export async function updatePlot(plotId: number, values: PlotFormValues) {
   try {
     // Update the plot in the database (with fallback to mock data)
     const updatedPlot = await plotRepository.updatePlot(plotId, values)
@@ -50,10 +52,10 @@ export async function updatePlot(plotId: string, values: PlotFormValues) {
   }
 }
 
-export async function deletePlot(plotId: string, farmId: string) {
+export async function deletePlot(plotId: number, farmId: number) {
   try {
     // Delete the plot from the database (with fallback to mock data)
-    const success = await plotRepository.deletePlot(plotId)
+    const success = await plotRepository.deletePlot(plotId, farmId)
 
     if (!success) {
       return {
@@ -97,33 +99,15 @@ export async function getAllPlots() {
   }
 }
 
-// Add a new function to get a plot by ID
-export async function getPlotById(plotId: string) {
-  try {
-    const plot = await plotRepository.getPlotById(plotId)
-
-    if (!plot) {
-      return {
-        success: false,
-        error: "Plot not found.",
-      }
-    }
-
-    return {
-      success: true,
-      plot,
-    }
-  } catch (error) {
-    console.error(`Error fetching plot with id ${plotId}:`, error)
-    return {
-      success: false,
-      error: "Failed to fetch plot. Please try again.",
-    }
-  }
+// Fix getPlotById to return just the plot for internal use
+export async function getPlotById(plotId: number) {
+  const plot = await plotRepository.getPlotById(plotId)
+  if (!plot) throw new Error("Plot not found")
+  return plot
 }
 
 // Add a new function to get plots by farm ID
-export async function getPlotsByFarmId(farmId: string) {
+export async function getPlotsByFarmId(farmId: number) {
   try {
     const plots = await plotRepository.getPlotsByFarmId(farmId)
     return {
@@ -140,11 +124,58 @@ export async function getPlotsByFarmId(farmId: string) {
   }
 }
 
-export async function deletePlotAction(id: string) {
+export async function deletePlotAction(id: number, farmId: number) {
   try {
-    const success = await deletePlot(Number(id));
-    return { success, message: success ? "Plot deleted" : "Failed to delete plot" };
+    const result = await deletePlot(id, farmId)
+    return { success: result.success, message: result.success ? "Plot deleted" : "Failed to delete plot" }
   } catch (e) {
-    return { success: false, message: "Error deleting plot" };
+    return { success: false, message: "Error deleting plot" }
   }
+}
+
+export async function getPlotWithRows(plotId: number) {
+  return await getPlotById(plotId)
+}
+
+// Fix addRowToPlot, updateRowInPlot, deleteRowFromPlot, addHoleToRow, updateHoleInRow to use the correct plot object
+export async function addRowToPlot(plotId: number, row: RowData) {
+  const plot = await getPlotById(plotId)
+  const newLayout = [...plot.layoutStructure, row]
+  await updatePlotLayout(plotId, newLayout)
+}
+
+export async function updateRowInPlot(plotId: number, rowNumber: number, data: Partial<RowData>) {
+  const plot = await getPlotById(plotId)
+  const newLayout = plot.layoutStructure.map((row: RowData) =>
+    row.rowNumber === rowNumber ? { ...row, ...data } : row
+  )
+  await updatePlotLayout(plotId, newLayout)
+}
+
+export async function deleteRowFromPlot(plotId: number, rowNumber: number) {
+  const plot = await getPlotById(plotId)
+  const newLayout = plot.layoutStructure.filter((row: RowData) => row.rowNumber !== rowNumber)
+  await updatePlotLayout(plotId, newLayout)
+}
+
+export async function addHoleToRow(plotId: number, rowNumber: number, hole: HoleData) {
+  const plot = await getPlotById(plotId)
+  const newLayout = plot.layoutStructure.map((row: RowData) =>
+    row.rowNumber === rowNumber ? { ...row, holes: [...row.holes, hole] } : row
+  )
+  await updatePlotLayout(plotId, newLayout)
+}
+
+export async function updateHoleInRow(plotId: number, rowNumber: number, holeNumber: number, data: Partial<HoleData>) {
+  const plot = await getPlotById(plotId)
+  const newLayout = plot.layoutStructure.map((row: RowData) => {
+    if (row.rowNumber !== rowNumber) return row
+    return {
+      ...row,
+      holes: row.holes.map((hole: HoleData) =>
+        hole.holeNumber === holeNumber ? { ...hole, ...data } : hole
+      ),
+    }
+  })
+  await updatePlotLayout(plotId, newLayout)
 }
