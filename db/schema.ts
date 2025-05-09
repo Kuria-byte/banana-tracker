@@ -1,4 +1,5 @@
 import { pgTable, serial, text, varchar, timestamp, boolean, integer, decimal, pgEnum, json } from "drizzle-orm/pg-core"
+import { relations } from "drizzle-orm"
 
 // Define enums for constrained fields
 export const healthStatusEnum = pgEnum("health_status", ["GOOD", "AVERAGE", "POOR"])
@@ -95,6 +96,7 @@ export const tasks = pgTable("tasks", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   farmId: integer("farm_id").references(() => farms.id),
+  plotId: integer("plot_id").references(() => plots.id, { onDelete: "set null" }), // Plot reference
   status: taskStatusEnum("status").default("PENDING"),
   priority: taskPriorityEnum("priority").default("MEDIUM"),
   dueDate: timestamp("due_date"),
@@ -270,3 +272,34 @@ export const buyers = pgTable("buyers", {
 });
 
 // Add NextAuth tables (Account, Session, VerificationToken) as needed, following your auth provider's requirements.
+// Define relationships
+
+
+
+export const plotsRelations = relations(plots, ({ one, many }) => ({
+  farm: one(farms, {
+    fields: [plots.farmId],
+    references: [farms.id],
+  }),
+  tasks: many(tasks),
+}))
+
+export const tasksRelations = relations(tasks, ({ one }) => ({
+  assignee: one(users, {
+    fields: [tasks.assigneeId],
+    references: [users.id],
+  }),
+  farm: one(farms, {
+    fields: [tasks.farmId],
+    references: [farms.id],
+  }),
+  plot: one(plots, {
+    fields: [tasks.plotId],
+    references: [plots.id],
+  }),
+}))
+
+export const usersRelations = relations(users, ({ many }) => ({
+  farms: many(farms),
+  assignedTasks: many(tasks, { relationName: "assignee" }),
+}))

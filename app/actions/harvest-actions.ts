@@ -58,11 +58,12 @@ export async function recordHarvestAction(values: HarvestFormValues) {
           if (selectedHoles.some(sel => sel.rowNumber === row.rowNumber && sel.holeNumber === hole.holeNumber)) {
             // Only update if hole is currently PLANTED (not already HARVESTED or EMPTY)
             if (hole.status === "PLANTED") {
-              return { ...hole, status: "HARVESTED" }
+              return { ...hole, status: "HARVESTED" as "HARVESTED" }
             }
-            console.log(`Hole ${hole.holeNumber} in row ${row.rowNumber} is not PLANTED, status remains ${hole.status}`)
+            // Keep the status as is, but cast it to the union type
+            return { ...hole, status: hole.status as "PLANTED" | "EMPTY" | "HARVESTED" }
           }
-          return hole
+          return { ...hole, status: hole.status as "PLANTED" | "EMPTY" | "HARVESTED" }
         })
       }
     })

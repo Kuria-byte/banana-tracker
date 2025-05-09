@@ -76,6 +76,7 @@ export const taskFormSchema = z.object({
   }),
   priority: z.enum(["Low", "Medium", "High", "Urgent"]),
   type: z.enum(["Planting", "Harvesting", "Maintenance", "Input Application", "Inspection"]),
+  creatorId: z.string().optional(),
 })
 
 export type TaskFormValues = z.infer<typeof taskFormSchema>

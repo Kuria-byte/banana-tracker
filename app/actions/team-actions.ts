@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { teamMembers } from "@/lib/mock-data/team"
 import type { TeamMember, TeamMemberFormData } from "@/lib/types/team"
+import { getAllUsers as dbGetAllUsers, getUserByEmail as dbGetUserByEmail } from "@/db/repositories/user-repository"
 
 // Get all team members
 export async function getTeamMembers(): Promise<TeamMember[]> {
@@ -72,4 +73,14 @@ export async function deleteTeamMember(id: string) {
   }
 
   return { success: false, error: "Team member not found" }
+}
+
+// Get all users from the database (for assignment, etc.)
+export async function getAllUsers() {
+  return dbGetAllUsers()
+}
+
+// Get user by email from the database
+export async function getUserByEmail(email: string) {
+  return dbGetUserByEmail(email)
 }

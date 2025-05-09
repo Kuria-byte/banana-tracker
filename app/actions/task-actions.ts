@@ -2,18 +2,14 @@
 
 import { revalidatePath } from "next/cache"
 import type { TaskFormValues } from "@/lib/validations/form-schemas"
-import * as taskRepositoryFallback from "@/db/repositories/task-repository-fallback"
+import * as taskRepository from "@/db/repositories/task-repository"
 
-export async function createTask(values: TaskFormValues) {
+export async function createTask(values: TaskFormValues & { creatorId?: string }) {
   try {
-    // Create the task in the database with fallback to mock data
-    const newTask = await taskRepositoryFallback.createTaskWithFallback(values)
-
-    // Revalidate the tasks page to show the new task
+    const newTask = await taskRepository.createTask(values)
     revalidatePath("/tasks")
     revalidatePath(`/farms/${values.farmId}`)
     revalidatePath("/")
-
     return {
       success: true,
       message: "Task created successfully!",
@@ -30,14 +26,10 @@ export async function createTask(values: TaskFormValues) {
 
 export async function updateTask(taskId: string, values: TaskFormValues & { status?: string }) {
   try {
-    // Update the task in the database with fallback to mock data
-    const updatedTask = await taskRepositoryFallback.updateTaskWithFallback(Number.parseInt(taskId), values)
-
-    // Revalidate the tasks page to show the updated task
+    const updatedTask = await taskRepository.updateTask(Number.parseInt(taskId), values)
     revalidatePath("/tasks")
     revalidatePath(`/farms/${values.farmId}`)
     revalidatePath("/")
-
     return {
       success: true,
       message: "Task updated successfully!",
@@ -54,13 +46,9 @@ export async function updateTask(taskId: string, values: TaskFormValues & { stat
 
 export async function updateTaskStatus(taskId: string, status: string) {
   try {
-    // Update the task status in the database with fallback to mock data
-    const updatedTask = await taskRepositoryFallback.updateTaskStatusWithFallback(Number.parseInt(taskId), status)
-
-    // Revalidate the tasks page to show the updated task
+    const updatedTask = await taskRepository.updateTaskStatus(Number.parseInt(taskId), status)
     revalidatePath("/tasks")
     revalidatePath("/")
-
     return {
       success: true,
       message: `Task marked as ${status}!`,
@@ -75,10 +63,9 @@ export async function updateTaskStatus(taskId: string, status: string) {
   }
 }
 
-// Add a new function to get all tasks
 export async function getAllTasks() {
   try {
-    const tasks = await taskRepositoryFallback.getAllTasksWithFallback()
+    const tasks = await taskRepository.getAllTasks()
     return {
       success: true,
       tasks,
@@ -93,10 +80,9 @@ export async function getAllTasks() {
   }
 }
 
-// Add a new function to get tasks by farm ID
 export async function getTasksByFarmId(farmId: string) {
   try {
-    const tasks = await taskRepositoryFallback.getTasksByFarmIdWithFallback(Number.parseInt(farmId))
+    const tasks = await taskRepository.getTasksByFarmId(Number.parseInt(farmId))
     return {
       success: true,
       tasks,
@@ -111,10 +97,9 @@ export async function getTasksByFarmId(farmId: string) {
   }
 }
 
-// Add a new function to get tasks by assigned user ID
 export async function getTasksByAssignedToId(userId: string) {
   try {
-    const tasks = await taskRepositoryFallback.getTasksByAssignedToIdWithFallback(Number.parseInt(userId))
+    const tasks = await taskRepository.getTasksByAssignedToId(Number.parseInt(userId))
     return {
       success: true,
       tasks,
@@ -129,10 +114,9 @@ export async function getTasksByAssignedToId(userId: string) {
   }
 }
 
-// Add a new function to get tasks by status
 export async function getTasksByStatus(status: string) {
   try {
-    const tasks = await taskRepositoryFallback.getTasksByStatusWithFallback(status)
+    const tasks = await taskRepository.getTasksByStatus(status)
     return {
       success: true,
       tasks,

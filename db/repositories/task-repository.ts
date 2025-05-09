@@ -79,20 +79,20 @@ export async function getTasksByStatus(status: string): Promise<Task[]> {
   }
 }
 
-export async function createTask(values: TaskFormValues): Promise<Task> {
+export async function createTask(values: TaskFormValues & { creatorId?: string }): Promise<Task> {
   try {
     const taskData = {
       title: values.title,
       description: values.description,
-      assigneeId: Number.parseInt(values.assignedToId),
-      farmId: Number.parseInt(values.farmId),
-      plotId: values.plotId ? Number.parseInt(values.plotId) : null,
-      rowId: values.rowId ? Number.parseInt(values.rowId) : null,
+      assigneeId: values.assignedToId && values.assignedToId !== "NONE" ? Number(values.assignedToId) : null,
+      farmId: values.farmId && values.farmId !== "NONE" ? Number(values.farmId) : null,
+      plotId: values.plotId && values.plotId !== "NONE" ? Number(values.plotId) : null,
       dueDate: values.dueDate,
       priority: mapTaskPriorityToDb(values.priority),
       type: mapTaskTypeToDb(values.type),
       status: "PENDING" as const,
       dateCreated: new Date(),
+      creatorId: values.creatorId && values.creatorId !== "NONE" ? Number(values.creatorId) : null,
     }
 
     const result = await db.insert(tasks).values(taskData).returning()
@@ -115,6 +115,7 @@ export async function updateTask(id: number, values: TaskFormValues & { status?:
       dueDate: values.dueDate,
       priority: mapTaskPriorityToDb(values.priority),
       type: mapTaskTypeToDb(values.type),
+      creatorId: values.creatorId && values.creatorId !== "NONE" ? Number(values.creatorId) : null,
       status: values.status ? mapTaskStatusToDb(values.status) : undefined,
       updatedAt: new Date(),
     }

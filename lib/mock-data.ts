@@ -91,23 +91,22 @@ export interface AgriculturalInput {
 
 // Task interface
 export interface Task {
-  id: string
-  title: string
-  description: string
-  assignedToId: string
-  farmId: string
-  plotId?: string
-  rowId?: string
-  dueDate: string
-  status: "Pending" | "In Progress" | "Completed" | "Cancelled"
-  priority: "Low" | "Medium" | "High" | "Urgent"
-  type: "Planting" | "Harvesting" | "Maintenance" | "Input Application" | "Inspection"
-  dateCreated?: string
-  // New fields for real DB data
-  farmName?: string
-  farmLocation?: string
-  assigneeName?: string
-  assigneeEmail?: string
+  id: string;
+  title: string;
+  description: string;
+  assignedToId: string;
+  farmId: string;
+  plotId?: string;  // Optional plot reference
+  dueDate: string;
+  status: "Pending" | "In Progress" | "Completed" | "Cancelled";
+  priority: string;
+  type?: string;
+  dateCreated?: string;
+  farmName?: string;
+  farmLocation?: string;
+  assigneeName?: string;
+  assigneeEmail?: string;
+  plotName?: string; // Optional plot name for display purposes
 }
 
 // Harvest interface
@@ -596,7 +595,7 @@ export const tasks: Task[] = [
     assignedToId: "user2",
     farmId: "farm1",
     plotId: "plot1",
-    rowId: "row3",
+    // rowId: "row3",
     dueDate: "2023-06-10",
     status: "In Progress",
     priority: "Urgent",
