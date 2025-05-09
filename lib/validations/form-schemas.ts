@@ -157,3 +157,22 @@ export const enhancedGrowthSchema = z.object({
 })
 
 export type EnhancedGrowthFormValues = z.infer<typeof enhancedGrowthSchema>
+
+// Harvest form schema
+export const harvestFormSchema = z.object({
+  farmId: z.string().min(1),
+  plotId: z.string().min(1),
+  userId: z.string().min(1),
+  harvestTeam: z.array(z.string()), // or a more detailed object
+  harvestDate: z.date(),
+  bunchCount: z.number().int().min(1),
+  totalWeight: z.number().min(0),
+  qualityRating: z.enum(["Excellent", "Good", "Average", "Poor"]),
+  notes: z.string().optional(),
+  selectedHoles: z.array(z.object({
+    rowNumber: z.number(),
+    holeNumber: z.number(),
+  })).min(1, "Select at least one hole to record a harvest."),
+})
+
+export type HarvestFormValues = z.infer<typeof harvestFormSchema>

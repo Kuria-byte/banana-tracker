@@ -181,6 +181,9 @@ export const farmHealthMetrics = pgTable("farm_health_metrics", {
 export const harvestRecords = pgTable("harvest_records", {
   id: serial("id").primaryKey(),
   farmId: integer("farm_id").references(() => farms.id).notNull(),
+  plotId: integer("plot_id").references(() => plots.id),
+  userId: integer("user_id").references(() => users.id),
+  harvestTeam: json("harvest_team"),
   harvestDate: timestamp("harvest_date").defaultNow().notNull(),
   quantity: integer("quantity"),
   weight: decimal("weight"),

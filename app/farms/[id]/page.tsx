@@ -15,6 +15,7 @@ import { PlotFormModal } from "@/components/modals/plot-form-modal"
 import { TaskFormModal } from "@/components/modals/task-form-modal"
 import { GrowthFormModal } from "@/components/modals/growth-form-modal"
 import { FarmHealthScoringModal } from "@/components/modals/farm-health-scoring-modal"
+import { HarvestFormModal } from "@/components/modals/harvest-form-modal"
 
 export default async function FarmDetailPage({ params }: { params: { id: string } }) {
   const farmId = Number(params.id)
@@ -172,6 +173,17 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
               }
               title="Add New Plot"
               description="Create a new plot for this farm"
+              farmId={farmId.toString()}
+            />
+          </div>
+
+          <div className="mb-6 flex justify-end">
+            <HarvestFormModal
+              trigger={<Button variant="secondary">Record Harvest</Button>}
+              title="Record Harvest"
+              description="Record a new harvest for this farm."
+              users={users.map(u => ({ id: u.id.toString(), name: u.name }))}
+              plots={plots.map(p => ({ ...p, id: p.id.toString(), name: p.name }))}
               farmId={farmId.toString()}
             />
           </div>
