@@ -1,68 +1,93 @@
-import { useParams, notFound } from "next/navigation"
-import { getFarmById } from "@/db/repositories/farm-repository"
-import { getPlotsByFarmId } from "@/db/repositories/plot-repository"
-import { getTasksByFarmId } from "@/db/repositories/task-repository"
-import { getAllUsers } from "@/db/repositories/user-repository"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { CalendarDays, Edit, MapPin, User, ArrowLeft, Leaf, LayoutGrid, Plus, Activity } from "lucide-react"
-import Link from "next/link"
-import { TaskCard } from "@/components/tasks/task-card"
-import { FarmFormModal } from "@/components/modals/farm-form-modal"
-import { PlotFormModal } from "@/components/modals/plot-form-modal"
-import { TaskFormModal } from "@/components/modals/task-form-modal"
-import { GrowthFormModal } from "@/components/modals/growth-form-modal"
-import { FarmHealthScoringModal } from "@/components/modals/farm-health-scoring-modal"
-import { HarvestFormModal } from "@/components/modals/harvest-form-modal"
+import { useParams, notFound } from "next/navigation";
+import { getFarmById } from "@/db/repositories/farm-repository";
+import { getPlotsByFarmId } from "@/db/repositories/plot-repository";
+import { getTasksByFarmId } from "@/db/repositories/task-repository";
+import { getAllUsers } from "@/db/repositories/user-repository";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import {
+  CalendarDays,
+  Edit,
+  MapPin,
+  User,
+  ArrowLeft,
+  Leaf,
+  LayoutGrid,
+  Plus,
+  Activity,
+} from "lucide-react";
+import Link from "next/link";
+import { TaskCard } from "@/components/tasks/task-card";
+import { FarmFormModal } from "@/components/modals/farm-form-modal";
+import { PlotFormModal } from "@/components/modals/plot-form-modal";
+import { TaskFormModal } from "@/components/modals/task-form-modal";
+import { GrowthFormModal } from "@/components/modals/growth-form-modal";
+import { FarmHealthScoringModal } from "@/components/modals/farm-health-scoring-modal";
+import { HarvestFormModal } from "@/components/modals/harvest-form-modal";
 
-export default async function FarmDetailPage({ params }: { params: { id: string } }) {
-  const farmId = Number(params.id)
-  const farm = await getFarmById(farmId)
-  if (!farm) notFound()
+export default async function FarmDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const farmId = Number(params.id);
+  const farm = await getFarmById(farmId);
+  if (!farm) notFound();
 
-  const plots = await getPlotsByFarmId(farmId)
-  const tasks = await getTasksByFarmId(farmId)
-  const users = await getAllUsers()
+  const plots = await getPlotsByFarmId(farmId);
+  const tasks = await getTasksByFarmId(farmId);
+  const users = await getAllUsers();
 
   // Map health status for UI
   const mapHealthStatus = (status: string) => {
     switch (status) {
-      case "GOOD": return "Good"
-      case "AVERAGE": return "Average"
-      case "POOR": return "Poor"
-      default: return status
+      case "GOOD":
+        return "Good";
+      case "AVERAGE":
+        return "Average";
+      case "POOR":
+        return "Poor";
+      default:
+        return status;
     }
-  }
+  };
 
   // Map DB fields to UI fields
   const farmUI = {
     ...farm,
-    healthStatus: farm.healthStatus as 'Good' | 'Average' | 'Poor',
+    healthStatus: farm.healthStatus as "Good" | "Average" | "Poor",
     plotCount: plots.length,
-  }
+  };
 
   const getHealthStatusColor = () => {
     switch (farmUI.healthStatus) {
       case "Good":
-        return "bg-green-100 text-green-800 hover:bg-green-100"
+        return "bg-green-100 text-green-800 hover:bg-green-100";
       case "Average":
-        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
+        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100";
       case "Poor":
-        return "bg-red-100 text-red-800 hover:bg-red-100"
+        return "bg-red-100 text-red-800 hover:bg-red-100";
       default:
-        return ""
+        return "";
     }
-  }
+  };
 
   // Find the earliest established date from plots
-  const establishedDate = plots.length > 0
-    ? plots
-        .map((p) => p.createdAt)
-        .filter(Boolean)
-        .sort()[0]
-    : null;
+  const establishedDate =
+    plots.length > 0
+      ? plots
+          .map((p) => p.createdAt)
+          .filter(Boolean)
+          .sort()[0]
+      : null;
 
   return (
     <div className="container px-4 py-6 md:px-6 md:py-8">
@@ -77,8 +102,13 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold tracking-tight">{farmUI.name}</h1>
-              <Badge variant="outline" className={`${getHealthStatusColor()} font-normal`}>
+              <h1 className="text-3xl font-bold tracking-tight">
+                {farmUI.name}
+              </h1>
+              <Badge
+                variant="outline"
+                className={`${getHealthStatusColor()} font-normal`}
+              >
                 {farmUI.healthStatus}
               </Badge>
             </div>
@@ -120,7 +150,11 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
               </div>
               <div>
                 <dt className="text-muted-foreground">Established</dt>
-                <dd className="font-medium">{establishedDate ? new Date(establishedDate).toLocaleDateString() : 'N/A'}</dd>
+                <dd className="font-medium">
+                  {establishedDate
+                    ? new Date(establishedDate).toLocaleDateString()
+                    : "N/A"}
+                </dd>
               </div>
             </dl>
           </CardContent>
@@ -132,10 +166,15 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {tasks.filter((t) => t.status === "Pending" || t.status === "In Progress").length}
+              {
+                tasks.filter(
+                  (t) => t.status === "Pending" || t.status === "In Progress"
+                ).length
+              }
             </div>
             <p className="text-xs text-muted-foreground">
-              {tasks.filter((t) => t.status === "Completed").length} tasks completed
+              {tasks.filter((t) => t.status === "Completed").length} tasks
+              completed
             </p>
           </CardContent>
         </Card>
@@ -157,40 +196,59 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
           </TabsTrigger>
           <TabsTrigger value="health" className="flex items-center">
             <Activity className="mr-2 h-4 w-4" />
-            Health Tracking
+            Health 
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="plots">
-          <div className="flex justify-between mb-4">
-            <h2 className="text-xl font-semibold">Plots</h2>
-            <PlotFormModal
-              trigger={
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Plot
-                </Button>
-              }
-              title="Add New Plot"
-              description="Create a new plot for this farm"
-              farmId={farmId.toString()}
-            />
-          </div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg md:text-2xl font-bold tracking-tight">
+              Plots
+            </h2>
 
-          <div className="mb-6 flex justify-end">
-            <HarvestFormModal
-              trigger={<Button variant="secondary">Record Harvest</Button>}
-              title="Record Harvest"
-              description="Record a new harvest for this farm."
-              users={users.map(u => ({ id: u.id.toString(), name: u.name }))}
-              plots={plots.map(p => ({ ...p, id: p.id.toString(), name: p.name }))}
-              farmId={farmId.toString()}
-            />
+            <div className="flex gap-x-2 md:gap-x-4">
+              <PlotFormModal
+                trigger={
+                  <Button size="sm" className="h-8 md:h-10">
+                    <Plus className="h-4 w-4 md:mr-2" />
+                    <span className="hidden md:inline">Add Plot</span>
+                    <span className="inline md:hidden">Add</span>
+                  </Button>
+                }
+                title="Add New Plot"
+                description="Create a new plot for this farm"
+                farmId={farmId.toString()}
+              />
+
+              <HarvestFormModal
+                trigger={
+                  <Button size="sm" variant="secondary" className="h-8 md:h-10">
+                    <Plus className="h-4 w-4 md:mr-2" />
+                    <span className="hidden md:inline">Record Harvest</span>
+                    <span className="inline md:hidden">Harvest</span>
+                  </Button>
+                }
+                title="Record Harvest"
+                description="Record a new harvest for this farm."
+                users={users.map((u) => ({
+                  id: u.id.toString(),
+                  name: u.name,
+                }))}
+                plots={plots.map((p) => ({
+                  ...p,
+                  id: p.id.toString(),
+                  name: p.name,
+                }))}
+                farmId={farmId.toString()}
+              />
+            </div>
           </div>
 
           {plots.length === 0 ? (
             <div className="text-center py-12 border rounded-lg">
-              <p className="text-muted-foreground">No plots available for this farm</p>
+              <p className="text-muted-foreground">
+                No plots available for this farm
+              </p>
               <PlotFormModal
                 trigger={<Button className="mt-4">Add Your First Plot</Button>}
                 title="Add New Plot"
@@ -211,8 +269,8 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
                           plot.status === "Good"
                             ? "bg-green-100 text-green-800"
                             : plot.status === "Average"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
                         }`}
                       >
                         {plot.status}
@@ -235,18 +293,20 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
                       </div>
                       <div>
                         <p className="text-muted-foreground">Established</p>
-                        <p className="font-medium">{new Date(plot.createdAt).toLocaleDateString()}</p>
+                        <p className="font-medium">
+                          {new Date(plot.createdAt).toLocaleDateString()}
+                        </p>
                       </div>
                     </div>
-                  
-   
                   </CardContent>
                   <CardFooter className="flex flex-col gap-2">
                     {/* <Button asChild variant="outline" className="w-full">
                       <Link href={`/farms/${farmId}/plots/${plot.id}`}>View Plot Details</Link>
                     </Button> */}
                     <Button asChild className="w-full">
-                      <Link href={`/farms/${farmId}/plots/${plot.id}/rows`}>Manage Rows</Link>
+                      <Link href={`/farms/${farmId}/plots/${plot.id}/rows`}>
+                        Manage Rows
+                      </Link>
                     </Button>
                   </CardFooter>
                 </Card>
@@ -273,9 +333,13 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
 
           {tasks.length === 0 ? (
             <div className="text-center py-12 border rounded-lg">
-              <p className="text-muted-foreground">No tasks available for this farm</p>
+              <p className="text-muted-foreground">
+                No tasks available for this farm
+              </p>
               <TaskFormModal
-                trigger={<Button className="mt-4">Create Your First Task</Button>}
+                trigger={
+                  <Button className="mt-4">Create Your First Task</Button>
+                }
                 title="Add New Task"
                 description="Create your first task for this farm"
                 farmId={farmId.toString()}
@@ -293,26 +357,36 @@ export default async function FarmDetailPage({ params }: { params: { id: string 
         <TabsContent value="growth">
           <div className="text-center py-12 border rounded-lg">
             <h2 className="text-xl font-semibold mb-2">Growth Tracking</h2>
-            <p className="text-muted-foreground mb-4">Track the growth stages of your banana plants</p>
-            <GrowthFormModal trigger={<Button>Set Up Growth Tracking</Button>} />
+            <p className="text-muted-foreground mb-4">
+              Track the growth stages of your banana plants
+            </p>
+            <GrowthFormModal
+              trigger={<Button>Set Up Growth Tracking</Button>}
+            />
           </div>
         </TabsContent>
         <TabsContent value="health">
           <div className="flex justify-between mb-4">
             <h2 className="text-xl font-semibold">Farm Health Tracking</h2>
             <Button asChild>
-              <Link href={`/farms/${farmId}/health`}>View Health Dashboard</Link>
+              <Link href={`/farms/${farmId}/health`}>
+                View Health Dashboard
+              </Link>
             </Button>
           </div>
 
           <div className="text-center py-12 border rounded-lg">
             <p className="text-muted-foreground mb-4">
-              Track and assess the health of your farm using our comprehensive scoring system
+              Track and assess the health of your farm using our comprehensive
+              scoring system
             </p>
-            <FarmHealthScoringModal farmId={farmId.toString()} trigger={<Button>Record Health Assessment</Button>} />
+            <FarmHealthScoringModal
+              farmId={farmId.toString()}
+              trigger={<Button>Record Health Assessment</Button>}
+            />
           </div>
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
