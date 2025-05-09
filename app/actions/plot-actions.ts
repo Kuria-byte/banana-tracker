@@ -101,7 +101,7 @@ export async function getAllPlots() {
 
 // Fix getPlotById to return just the plot for internal use
 export async function getPlotById(plotId: number) {
-  const plot = await plotRepository.getPlotById(plotId)
+    const plot = await plotRepository.getPlotById(plotId)
   if (!plot) throw new Error("Plot not found")
   return plot
 }

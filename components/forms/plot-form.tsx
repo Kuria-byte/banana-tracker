@@ -7,6 +7,7 @@ import { CalendarIcon, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 
+
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
@@ -17,8 +18,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
 import { plotFormSchema, type PlotFormValues } from "@/lib/validations/form-schemas"
-import { addPlot, updatePlot } from "@/app/actions/plot-actions"
-import { farms } from "@/lib/mock-data"
+
+import { addPlot, updatePlot } from "@/app/actions/plot-actions"  
+import { getAllFarms } from "@/app/actions/farm-actions"
+
+import type { Farm } from "@/lib/mock-data"
 
 // Soil types for the dropdown
 const soilTypes = ["Loamy", "Sandy", "Clay", "Silt", "Peat", "Chalk", "Loam-Sandy", "Clay-Loam"]
@@ -61,14 +65,19 @@ function generateLayoutStructure(rowCount: number, holeCount: number) {
 
 export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [createdPlotId, setCreatedPlotId] = useState<string | null>(null)
   const router = useRouter()
   const isEditing = !!initialData?.id
+  const [farms, setFarms] = useState<Farm[]>([])
+  const [farmsLoading, setFarmsLoading] = useState(false)
+  const [farmsError, setFarmsError] = useState<string | null>(null)
 
-  // Set default values from initialData or use empty values
   const defaultValues: Partial<PlotFormValues> = {
     name: initialData?.name || "",
     farmId: farmId || initialData?.farmId || "",
-    area: initialData?.area || undefined,
+    area: initialData?.area ?? 0,
     soilType: initialData?.soilType || "",
     dateEstablished: initialData?.dateEstablished ? new Date(initialData.dateEstablished) : new Date(),
     healthStatus: initialData?.healthStatus || "Good",
@@ -79,55 +88,138 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
     layoutStructure: Array.isArray(initialData?.layoutStructure) ? initialData.layoutStructure : [],
   }
 
+  // Log initial form values for debugging
+  useEffect(() => {
+    console.log("PlotForm initialized with values:", defaultValues)
+  }, [])
+
   const form = useForm<PlotFormValues>({
     resolver: zodResolver(plotFormSchema),
     defaultValues,
+    mode: "onChange", // Validate on change for better user feedback
   })
 
-  // If farmId is provided as a prop, set it in the form
+  // Debug form errors
+  useEffect(() => {
+    const subscription = form.watch(() => {
+      if (Object.keys(form.formState.errors).length > 0) {
+        console.log("Form validation errors:", form.formState.errors)
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [form])
+
   useEffect(() => {
     if (farmId) {
       form.setValue("farmId", farmId)
     }
   }, [farmId, form])
 
-  // Auto-generate layoutStructure when rowCount or holeCount changes
+  // Layout generation
+  const rowCount = Number(form.watch('rowCount') ?? 0)
+  const holeCount = Number(form.watch('holeCount') ?? 0)
   useEffect(() => {
-    const rowCountRaw = form.watch('rowCount');
-    const holeCountRaw = form.watch('holeCount');
-    const rowCount = typeof rowCountRaw === 'number' && !isNaN(rowCountRaw) ? rowCountRaw : 0;
-    const holeCount = typeof holeCountRaw === 'number' && !isNaN(holeCountRaw) ? holeCountRaw : 0;
     if (rowCount > 0 && holeCount > 0) {
-      const layout = generateLayoutStructure(rowCount, holeCount);
-      form.setValue('layoutStructure', layout);
+      try {
+        const layout = generateLayoutStructure(rowCount, holeCount)
+        form.setValue('layoutStructure', layout, { shouldValidate: false })
+      } catch (error) {
+        console.error("Error generating layout:", error)
+      }
+    } else {
+      form.setValue('layoutStructure', [], { shouldValidate: false })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.watch('rowCount'), form.watch('holeCount')]);
+  }, [rowCount, holeCount, form])
+
+  const layoutStructure = form.watch('layoutStructure') ?? []
+
+  // Fetch farms from the database
+  useEffect(() => {
+    async function fetchFarms() {
+      setFarmsLoading(true)
+      setFarmsError(null)
+      try {
+        const result = await getAllFarms()
+        if (result.success && Array.isArray(result.farms)) {
+          setFarms(result.farms)
+        } else {
+          setFarmsError(result.error || "Failed to fetch farms.")
+        }
+      } catch (error) {
+        setFarmsError("Failed to fetch farms.")
+      } finally {
+        setFarmsLoading(false)
+      }
+    }
+    fetchFarms()
+  }, [])
 
   async function onSubmit(values: PlotFormValues) {
+    console.log("Form submitted with values:", values)
+    setFormError(null)
     setIsSubmitting(true)
+    
     try {
-      const result = isEditing && initialData?.id ? await updatePlot(Number(initialData.id), values) : await addPlot(values)
+      // Ensure all values are of the correct type
+      const payload = {
+        ...values,
+        area: Number(values.area),
+        rowCount: Number(values.rowCount),
+        holeCount: Number(values.holeCount),
+        plantCount: Number(values.plantCount),
+        farmId: String(values.farmId),
+        layoutStructure: Array.isArray(values.layoutStructure) ? values.layoutStructure : [],
+      }
+      
+      console.log("Calling server action with payload:", {
+        isEditing,
+        plotId: initialData?.id,
+        payload
+      })
+      
+      // Try to call the server action
+      let result
+      try {
+        result = isEditing && initialData?.id
+          ? await updatePlot(Number(initialData.id), payload)
+          : await addPlot(payload)
+        
+        console.log("Server action result:", result)
+      } catch (actionError: unknown) {
+        console.error("Server action error:", actionError)
+        const errorMessage = actionError instanceof Error ? actionError.message : "Unknown error"
+        throw new Error(`Server action failed: ${errorMessage}`)
+      }
 
-      if (result.success) {
+      if (result?.success && result?.plot) {
+        setSuccess(true)
+        setCreatedPlotId(result.plot.id ? String(result.plot.id) : null)
         toast({
           title: isEditing ? "Plot updated" : "Plot added",
           description: result.message,
         })
-
-        if (onSuccess) {
-          onSuccess()
-        } else {
-          router.push(`/farms/${values.farmId}`)
-        }
+        setTimeout(() => {
+          if (onSuccess) onSuccess();
+        }, 1000);
+      } else if (result && 'issues' in result) {
+        // Zod validation error from server
+        setFormError("Please check your input and try again.")
+        toast({
+          title: "Validation Error",
+          description: "Please check your input and try again.",
+          variant: "destructive",
+        })
       } else {
+        setFormError(result?.error || "Something went wrong. Please try again.")
         toast({
           title: "Error",
-          description: result.error || "Something went wrong. Please try again.",
+          description: result?.error || "Something went wrong. Please try again.",
           variant: "destructive",
         })
       }
     } catch (error) {
+      console.error("Form submission error:", error)
+      setFormError("An unexpected error occurred. Please try again.")
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
@@ -138,9 +230,37 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
     }
   }
 
+  if (success) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="bg-green-100 border border-green-300 rounded-lg p-6 text-center max-w-md w-full">
+          <h2 className="text-2xl font-bold mb-2">{isEditing ? "Plot updated!" : "Plot created!"}</h2>
+          <p className="mb-4">{isEditing ? "The plot details have been updated successfully." : "Your new plot has been created successfully."}</p>
+          {createdPlotId && (
+            <Button onClick={() => router.push(`/farms/${farmId || initialData?.farmId}/plots/${createdPlotId}/rows`)} className="inline-block mb-2 text-primary underline">
+              View Plot Rows
+            </Button>
+          )}
+          <div className="flex gap-4 justify-center mt-4">
+            <Button onClick={() => router.push(`/farms/${farmId || initialData?.farmId}`)}>Go to Farm</Button>
+            <Button variant="outline" onClick={() => setSuccess(false)}>Create Another</Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Display form-level errors */}
+        {formError && (
+          <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-md">
+            {formError}
+          </div>
+        )}
+      
+        {/* Form fields remain the same */}
         <FormField
           control={form.control}
           name="name"
@@ -148,7 +268,11 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
             <FormItem>
               <FormLabel>Plot Name</FormLabel>
               <FormControl>
-                <Input placeholder="Enter plot name" {...field} />
+                <Input
+                  placeholder="Enter plot name"
+                  {...field}
+                  value={field.value ?? ""}
+                />
               </FormControl>
               <FormDescription>A name to identify this plot</FormDescription>
               <FormMessage />
@@ -162,18 +286,26 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Farm</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!!farmId}>
+              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!!farmId || farmsLoading}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a farm" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {farms.map((farm) => (
-                    <SelectItem key={farm.id} value={farm.id}>
-                      {farm.name}
-                    </SelectItem>
-                  ))}
+                  {farmsLoading ? (
+                    <SelectItem value="__loading__" disabled>Loading farms...</SelectItem>
+                  ) : farmsError ? (
+                    <SelectItem value="__error__" disabled>{farmsError}</SelectItem>
+                  ) : farms.length === 0 ? (
+                    <SelectItem value="__empty__" disabled>No farms found</SelectItem>
+                  ) : (
+                    farms.map((farm) => (
+                      <SelectItem key={farm.id} value={farm.id}>
+                        {farm.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               <FormDescription>The farm this plot belongs to</FormDescription>
@@ -182,6 +314,7 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
           )}
         />
 
+        {/* Rest of your form fields remain the same */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -195,7 +328,7 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
                     step="0.01"
                     placeholder="Enter plot area"
                     {...field}
-                    onChange={(e) => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
+                    value={field.value ?? 0}
                   />
                 </FormControl>
                 <FormDescription>The total area of this plot in acres</FormDescription>
@@ -298,7 +431,7 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
             <FormItem>
               <FormLabel>Description (Optional)</FormLabel>
               <FormControl>
-                <Textarea placeholder="Enter plot description" className="resize-none min-h-[100px]" {...field} />
+                <Textarea placeholder="Enter plot description" className="resize-none min-h-[100px]" {...field} value={field.value ?? ""} />
               </FormControl>
               <FormDescription>Additional details about this plot</FormDescription>
               <FormMessage />
@@ -314,7 +447,7 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
               <FormItem>
                 <FormLabel>Row Count</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="Number of rows" {...field} />
+                  <Input type="number" placeholder="Number of rows" {...field} value={field.value ?? 0} />
                 </FormControl>
                 <FormDescription>Total number of rows in this plot</FormDescription>
                 <FormMessage />
@@ -328,7 +461,7 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
               <FormItem>
                 <FormLabel>Hole Count</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="Number of holes" {...field} />
+                  <Input type="number" placeholder="Number of holes" {...field} value={field.value ?? 0} />
                 </FormControl>
                 <FormDescription>Total number of holes in this plot</FormDescription>
                 <FormMessage />
@@ -350,12 +483,13 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
             )}
           />
         </div>
+        
         {/* Layout preview */}
-        {/* <div className="border rounded p-4 bg-gray-50 mt-4">
+        <div className="border rounded p-4 bg-gray-50 mt-4">
           <h3 className="font-semibold mb-2">Layout Preview</h3>
-          {Array.isArray(form.watch('layoutStructure')) && form.watch('layoutStructure').length > 0 ? (
+          {Array.isArray(layoutStructure) && layoutStructure.length > 0 ? (
             <ul className="text-xs max-h-40 overflow-auto">
-              {(form.watch('layoutStructure') as Array<{ rowNumber: number; holes: any[] }>).map((row, i) => (
+              {layoutStructure.map((row, i) => (
                 <li key={i}>
                   Row {row.rowNumber}: {Array.isArray(row.holes) ? row.holes.length : 0} holes
                 </li>
@@ -364,17 +498,41 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
           ) : (
             <span className="text-gray-400">No layout generated yet.</span>
           )}
-        </div> */}
+        </div>
 
         <div className="flex justify-end gap-4">
           <Button type="button" variant="outline" onClick={onSuccess} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditing ? "Update Plot" : "Add Plot"}
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+            className={isSubmitting ? "opacity-70" : ""}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {isEditing ? "Updating..." : "Adding..."}
+              </>
+            ) : (
+              isEditing ? "Update Plot" : "Add Plot"
+            )}
           </Button>
         </div>
+        
+        {/* Debug information - remove in production */}
+        {process.env.NODE_ENV !== "production" && (
+          <div className="mt-6 p-3 bg-gray-100 text-xs rounded">
+            <details>
+              <summary className="cursor-pointer font-semibold">Debug Information</summary>
+              <div className="mt-2">
+                <p>Form State: {form.formState.isDirty ? "Dirty" : "Pristine"}</p>
+                <p>Submission State: {isSubmitting ? "Submitting" : "Idle"}</p>
+                <p>Validation Errors: {Object.keys(form.formState.errors).length}</p>
+              </div>
+            </details>
+          </div>
+        )}
       </form>
     </Form>
   )

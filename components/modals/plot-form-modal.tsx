@@ -26,7 +26,7 @@ export function PlotFormModal({ trigger, title, description, farmId, initialData
   const [open, setOpen] = useState(false)
 
   const handleSuccess = () => {
-    setOpen(false)
+    setTimeout(() => setOpen(false), 1000); // Give time for toast to show
   }
 
   return (

@@ -16,6 +16,7 @@ import {
   Check,
   X,
   AlertCircle,
+  Loader2,
 } from "lucide-react"
 import type { RowData, HoleData } from "@/lib/types/plot"
 import { cn } from "@/lib/utils"
@@ -35,25 +36,28 @@ export default function RowClient({ rows, plotId }: RowClientProps) {
   const initialRowId = searchParams.get("row")
 
   const [activeTab, setActiveTab] = useState("list")
-  const [selectedRowId, setSelectedRowId] = useState<string | null>(initialRowId)
+  const [isLoading, setIsLoading] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const [selectedHoles, setSelectedHoles] = useState<string[]>([])
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  const [selectedRowNumber, setSelectedRowNumber] = useState<number | null>(
-    rows.length > 0 ? rows[0].rowNumber : null
-  )
-
-  useEffect(() => {
-    if (rows.length > 0 && selectedRowNumber === null) {
-      setSelectedRowNumber(rows[0].rowNumber)
+  // Initialize selectedRowNumber based on initialRowId or the first row
+  const [selectedRowNumber, setSelectedRowNumber] = useState<number>(() => {
+    if (initialRowId) {
+      const parsed = parseInt(initialRowId, 10);
+      return isNaN(parsed) ? (rows.length > 0 ? rows[0].rowNumber : 1) : parsed;
     }
-  }, [rows, selectedRowNumber])
+    return rows.length > 0 ? rows[0].rowNumber : 1;
+  });
 
-  const selectedRow = selectedRowNumber ? rows.find((r) => r.rowNumber === selectedRowNumber) : null
-  const holes: HoleData[] = selectedRow?.holes || []
+  // Get the currently selected row based on selectedRowNumber
+  const selectedRow = rows.find(r => r.rowNumber === selectedRowNumber) || 
+                      (rows.length > 0 ? rows[0] : null);
+                      
+  const holes = selectedRow?.holes || [];
 
   const toggleRow = (rowId: string) => {
     setExpandedRows((prev) => ({
@@ -62,11 +66,37 @@ export default function RowClient({ rows, plotId }: RowClientProps) {
     }))
   }
 
+  // Improved row selection with loading state
   const handleRowSelect = (rowId: string) => {
-    setSelectedRowId(rowId)
-    if (activeTab === "visual") {
-      drawVisualLayout()
-    }
+    const rowNumber = parseInt(rowId, 10);
+    
+    // Don't re-select the same row
+    if (rowNumber === selectedRowNumber) return;
+    
+    // Start loading state
+    setIsLoading(true);
+    
+    // Update URL to reflect the selected row
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.set('row', rowId);
+    router.replace(`${window.location.pathname}?${newParams.toString()}`, { scroll: false });
+    
+    // Set the selected row with a slight delay to show loading state
+    setTimeout(() => {
+      setSelectedRowNumber(rowNumber);
+      
+      // End loading after a short delay
+      setTimeout(() => {
+        setIsLoading(false);
+        
+        // Trigger visual layout redraw after state updates are complete
+        if (activeTab === "visual") {
+          setTimeout(() => {
+            drawVisualLayout();
+          }, 0);
+        }
+      }, 300); // Short delay for loading state visibility
+    }, 100);
   }
 
   const toggleHoleSelection = (holeId: string) => {
@@ -120,105 +150,172 @@ export default function RowClient({ rows, plotId }: RowClientProps) {
     }
   }
 
+  // Completely redesigned visual layout function
   const drawVisualLayout = () => {
-    if (!selectedRow || !canvasRef.current || !containerRef.current) return
-    const canvas = canvasRef.current
-    const container = containerRef.current
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-    // Set canvas size to match container
-    const rect = container.getBoundingClientRect()
-    canvas.width = rect.width
-    canvas.height = 300
+    if (!selectedRow || !canvasRef.current || !containerRef.current) return;
+    
+    console.log("Drawing visual layout for row:", selectedRow.rowNumber);
+    
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    
+    // Set canvas size to match container width while maintaining a good height for visibility
+    const rect = container.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = 300;
+    
     // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    // Assume horizontal for now (or add orientation to Row type if needed)
-    const isHorizontal = true
-    const rowLength = Number(selectedRow.length) * 10 // Scale meters to pixels
-    const holeSpacing = Number(selectedRow.spacing) * 10 // Scale meters to pixels
-    // Draw the row line
-    ctx.beginPath()
-    ctx.strokeStyle = "#6b7280" // gray-500
-    ctx.lineWidth = 2
-    if (isHorizontal) {
-      const y = canvas.height / 2
-      ctx.moveTo(50, y)
-      ctx.lineTo(50 + rowLength, y)
-    } else {
-      const x = canvas.width / 2
-      ctx.moveTo(x, 50)
-      ctx.lineTo(x, 50 + rowLength)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Get holes data
+    const holes = selectedRow.holes || [];
+    const holeCount = holes.length;
+    
+    if (holeCount === 0) {
+      // Draw message when no holes are present
+      ctx.font = "16px Arial";
+      ctx.fillStyle = "#6b7280";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("No holes in this row", canvas.width / 2, canvas.height / 2);
+      return;
     }
-    ctx.stroke()
-    // Draw the holes
-    const rowHoles: HoleData[] = selectedRow.holes || []
-    rowHoles.forEach((hole: HoleData) => {
-      const holeNumber = hole.holeNumber
-      let x, y
-      if (isHorizontal) {
-        x = 50 + (holeNumber - 1) * holeSpacing
-        y = canvas.height / 2
-      } else {
-        x = canvas.width / 2
-        y = 50 + (holeNumber - 1) * holeSpacing
-      }
-      // Draw hole background
-      ctx.beginPath()
-      ctx.fillStyle = hole.status === "EMPTY" ? "#e5e7eb" : hole.status === "PLANTED" ? "#d1fae5" : "#fef3c7"
-      ctx.arc(x, y, 15, 0, Math.PI * 2)
-      ctx.fill()
-      // Draw hole border
-      ctx.beginPath()
-      ctx.strokeStyle = "#4b5563" // gray-600
-      ctx.lineWidth = 1
-      ctx.arc(x, y, 15, 0, Math.PI * 2)
-      ctx.stroke()
-      // Draw health indicator if planted
-      if (hole.status === "PLANTED" && hole.plantHealth) {
-        let healthColor
-        switch (hole.plantHealth) {
-          case "Healthy":
-            healthColor = "#10b981"
-            break // green-500
-          case "Diseased":
-            healthColor = "#ef4444"
-            break // red-500
-          case "Pest-affected":
-            healthColor = "#f97316"
-            break // orange-500
-          case "Damaged":
-            healthColor = "#eab308"
-            break // yellow-500
-          default:
-            healthColor = "#6b7280" // gray-500
+    
+    // Calculate canvas dimensions and scaling
+    const padding = 50; // Padding on both sides
+    const usableWidth = canvas.width - (padding * 2);
+    const centerY = canvas.height / 2;
+    
+    // Draw row line
+    ctx.beginPath();
+    ctx.strokeStyle = "#6b7280"; // gray-500
+    ctx.lineWidth = 2;
+    ctx.moveTo(padding, centerY);
+    ctx.lineTo(canvas.width - padding, centerY);
+    ctx.stroke();
+    
+    // Calculate hole spacing to fit all holes
+    const holeRadius = 15;
+    const minSpacing = holeRadius * 3; // Minimum spacing between hole centers
+    
+    // Calculate ideal spacing based on container width and hole count
+    let spacing = usableWidth / (holeCount - 1);
+    
+    // If we have only one hole, center it
+    if (holeCount === 1) {
+      const x = canvas.width / 2;
+      const y = centerY;
+      
+      // Draw hole
+      drawHole(ctx, holes[0], x, y, holeRadius);
+    } else {
+      // If spacing is too small, we need to make the diagram scrollable
+      const finalSpacing = Math.max(spacing, minSpacing);
+      const totalWidth = finalSpacing * (holeCount - 1) + (padding * 2);
+      
+      // If we need to scroll, update canvas width
+      if (totalWidth > canvas.width) {
+        canvas.width = totalWidth;
+        
+        // Redraw the row line with the new width
+        ctx.beginPath();
+        ctx.strokeStyle = "#6b7280";
+        ctx.lineWidth = 2;
+        ctx.moveTo(padding, centerY);
+        ctx.lineTo(canvas.width - padding, centerY);
+        ctx.stroke();
+        
+        // Enable scrolling on container if needed
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.style.overflowX = "auto";
         }
-        ctx.beginPath()
-        ctx.fillStyle = healthColor
-        ctx.arc(x, y - 15, 5, 0, Math.PI * 2)
-        ctx.fill()
       }
-      // Draw hole number
-      ctx.fillStyle = "#1f2937" // gray-800
-      ctx.font = "10px Arial"
-      ctx.textAlign = "center"
-      ctx.textBaseline = "middle"
-      ctx.fillText(holeNumber.toString(), x, y)
-    })
+      
+      // Draw all holes with proper spacing
+      for (let i = 0; i < holeCount; i++) {
+        const x = padding + (i * finalSpacing);
+        const y = centerY;
+        drawHole(ctx, holes[i], x, y, holeRadius);
+      }
+    }
+    
+    // Draw the row number at the bottom
+    ctx.font = "bold 14px Arial";
+    ctx.fillStyle = "#000000";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(`Row ${selectedRow.rowNumber}`, canvas.width / 2, canvas.height - 10);
+  }
+  
+  // Helper function to draw individual holes
+  const drawHole = (ctx: CanvasRenderingContext2D, hole: HoleData, x: number, y: number, radius: number) => {
+    // Draw hole background
+    ctx.beginPath();
+    ctx.fillStyle = hole.status === "EMPTY" ? "#e5e7eb" : 
+                    hole.status === "PLANTED" ? "#d1fae5" : "#fef3c7";
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw hole border
+    ctx.beginPath();
+    ctx.strokeStyle = "#4b5563"; // gray-600
+    ctx.lineWidth = 1;
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Draw health indicator if planted
+    if (hole.status === "PLANTED" && hole.plantHealth) {
+      let healthColor;
+      switch (hole.plantHealth) {
+        case "Healthy":
+          healthColor = "#10b981"; // green-500
+          break;
+        case "Diseased":
+          healthColor = "#ef4444"; // red-500
+          break;
+        case "Pest-affected":
+          healthColor = "#f97316"; // orange-500
+          break;
+        case "Damaged":
+          healthColor = "#eab308"; // yellow-500
+          break;
+        default:
+          healthColor = "#6b7280"; // gray-500
+      }
+      
+      // Draw health indicator dot
+      ctx.beginPath();
+      ctx.fillStyle = healthColor;
+      ctx.arc(x, y - radius - 3, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Draw hole number
+    ctx.fillStyle = "#1f2937"; // gray-800
+    ctx.font = radius > 15 ? "11px Arial" : "10px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(hole.holeNumber?.toString() || "", x, y);
   }
 
+  // Redraw visual layout when dependencies change
   useEffect(() => {
-    if (activeTab === "visual" && selectedRow) {
-      drawVisualLayout()
+    if (activeTab === "visual" && selectedRow && !isLoading) {
+      drawVisualLayout();
+      
       // Handle window resize
       const handleResize = () => {
-        drawVisualLayout()
-      }
-      window.addEventListener("resize", handleResize)
+        drawVisualLayout();
+      };
+      
+      window.addEventListener("resize", handleResize);
       return () => {
-        window.removeEventListener("resize", handleResize)
-      }
+        window.removeEventListener("resize", handleResize);
+      };
     }
-  }, [activeTab, selectedRow, selectedRowId])
+  }, [activeTab, selectedRow, selectedRowNumber, isLoading]);
 
   if (!rows || rows.length === 0) {
     return (
@@ -226,7 +323,7 @@ export default function RowClient({ rows, plotId }: RowClientProps) {
         <div className="text-center py-12">
           <h1 className="text-2xl font-bold mb-4">No rows found for this plot</h1>
           <Button asChild>
-            <Link href={`/farms/${farmId}/plots/${plotId}`}>
+            <Link href={`/farms/${farmId}`}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Plot
             </Link>
@@ -240,7 +337,7 @@ export default function RowClient({ rows, plotId }: RowClientProps) {
     <div className="container px-4 py-6">
       <div className="mb-6">
         <Button variant="ghost" asChild className="mb-4 -ml-2 p-2">
-          <Link href={`/farms/${farmId}/plots/${plotId}`}>
+          <Link href={`/farms/${farmId}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Plot
           </Link>
@@ -282,7 +379,10 @@ export default function RowClient({ rows, plotId }: RowClientProps) {
           ) : (
             <div className="grid gap-4">
               {rows.map((row) => (
-                <Card key={row.rowNumber} className="overflow-hidden">
+                <Card key={row.rowNumber} className={cn(
+                  "overflow-hidden",
+                  selectedRowNumber === row.rowNumber ? "border-primary border-2" : ""
+                )}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">Row {row.rowNumber}</CardTitle>
@@ -296,12 +396,16 @@ export default function RowClient({ rows, plotId }: RowClientProps) {
                           <span className="sr-only">{expandedRows[row.rowNumber.toString()] ? "Collapse" : "Expand"}</span>
                         </Button>
                         <Button
-                          variant={selectedRowId === row.rowNumber.toString() ? "default" : "outline"}
+                          variant={selectedRowNumber === row.rowNumber ? "default" : "outline"}
                           size="sm"
                           onClick={() => handleRowSelect(row.rowNumber.toString())}
                           className="ml-1"
+                          disabled={isLoading}
                         >
-                          {selectedRowId === row.rowNumber.toString() ? "Selected" : "Select"}
+                          {isLoading && selectedRowNumber === row.rowNumber ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                          ) : null}
+                          {selectedRowNumber === row.rowNumber ? "Selected" : "Select"}
                         </Button>
                       </div>
                     </div>
@@ -342,9 +446,9 @@ export default function RowClient({ rows, plotId }: RowClientProps) {
                             Add Hole
                           </Button>
                         </div>
-                        <div className="grid grid-cols-5 gap-2">
-                          {row.holes.slice(0, 10).map((holeData, i) => {
-                            if (!holeData) return null
+                        <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2">
+                          {row.holes.slice(0, 24).map((holeData, i) => {
+                            if (!holeData) return null;
 
                             return (
                               <div
@@ -366,11 +470,11 @@ export default function RowClient({ rows, plotId }: RowClientProps) {
                                 )}
                                 {holeData.holeNumber}
                               </div>
-                            )
+                            );
                           })}
-                          {row.holes.length > 10 && (
+                          {row.holes.length > 24 && (
                             <div className="aspect-square rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium">
-                              +{row.holes.length - 10}
+                              +{row.holes.length - 24}
                             </div>
                           )}
                         </div>
@@ -387,15 +491,28 @@ export default function RowClient({ rows, plotId }: RowClientProps) {
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <CardTitle>Visual Layout</CardTitle>
-                <div className="flex flex-wrap gap-2">
+                <CardTitle className="flex items-center">
+                  Visual Layout
+                  {isLoading && (
+                    <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                  )}
+                </CardTitle>
+                <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
                   {rows.map((row) => (
                     <Button
                       key={row.rowNumber}
                       size="sm"
-                      variant={selectedRowId === row.rowNumber.toString() ? "default" : "outline"}
+                      variant={selectedRowNumber === row.rowNumber ? "default" : "outline"}
                       onClick={() => handleRowSelect(row.rowNumber.toString())}
+                      disabled={isLoading}
+                      className={cn(
+                        "min-w-[70px]",
+                        selectedRowNumber === row.rowNumber ? "bg-primary text-primary-foreground" : ""
+                      )}
                     >
+                      {isLoading && selectedRowNumber === row.rowNumber ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      ) : null}
                       Row {row.rowNumber}
                     </Button>
                   ))}
@@ -403,7 +520,7 @@ export default function RowClient({ rows, plotId }: RowClientProps) {
               </div>
             </CardHeader>
             <CardContent>
-              {selectedRow ? (
+              {selectedRow && !isLoading ? (
                 <div>
                   <div className="bg-white p-4 rounded-lg border mb-4">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
@@ -417,7 +534,7 @@ export default function RowClient({ rows, plotId }: RowClientProps) {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Spacing</p>
-                        <p className="font-medium">{selectedRow.holes.length} m</p>
+                        <p className="font-medium">{selectedRow.spacing} m</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Holes</p>
@@ -436,8 +553,10 @@ export default function RowClient({ rows, plotId }: RowClientProps) {
                     </div>
                   </div>
 
-                  <div ref={containerRef} className="w-full overflow-x-auto">
-                    <canvas ref={canvasRef} className="border rounded-md min-h-[300px] min-w-full" />
+                  <div ref={scrollContainerRef} className="w-full overflow-x-auto">
+                    <div ref={containerRef} className="min-w-full">
+                      <canvas ref={canvasRef} className="border rounded-md min-h-[300px] min-w-full" />
+                    </div>
                   </div>
 
                   <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -461,13 +580,22 @@ export default function RowClient({ rows, plotId }: RowClientProps) {
                     </div>
                   </div>
                 </div>
+              ) : isLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                  <p>Loading row data...</p>
+                </div>
               ) : (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground mb-4">Select a row to view its visual layout</p>
                   {rows.length > 0 ? (
                     <div className="flex flex-wrap justify-center gap-2">
                       {rows.slice(0, 5).map((row) => (
-                        <Button key={row.rowNumber} onClick={() => handleRowSelect(row.rowNumber.toString())} size="sm">
+                        <Button 
+                          key={row.rowNumber} 
+                          onClick={() => handleRowSelect(row.rowNumber.toString())} 
+                          size="sm"
+                        >
                           Row {row.rowNumber}
                         </Button>
                       ))}

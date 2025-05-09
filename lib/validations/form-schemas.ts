@@ -36,7 +36,21 @@ export const plotFormSchema = z.object({
   rowCount: z.coerce.number().int().min(0).optional(),
   holeCount: z.coerce.number().int().min(0).optional(),
   plantCount: z.coerce.number().int().min(0).optional(),
-  layoutStructure: z.union([z.string(), z.record(z.any())]).optional(),
+  layoutStructure: z.array(
+    z.object({
+      rowNumber: z.number(),
+      length: z.number(),
+      spacing: z.number(),
+      holes: z.array(
+        z.object({
+          holeNumber: z.number(),
+          status: z.string(),
+          rowNumber: z.number(),
+          plantHealth: z.string(),
+        })
+      ),
+    })
+  ),
 })
 
 export type PlotFormValues = z.infer<typeof plotFormSchema>
