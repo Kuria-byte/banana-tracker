@@ -33,8 +33,8 @@ interface PlotFormProps {
   onSuccess?: () => void
 }
 
-// Utility to auto-generate layout structure
-function generateLayoutStructure(rowCount: number, holeCount: number) {
+// Updated utility to include row length and spacing
+function generateLayoutStructure(rowCount: number, holeCount: number, rowLength: number, rowSpacing: number) {
   if (!rowCount || !holeCount) return [];
   const holesPerRow = Math.ceil(holeCount / rowCount);
   let holesLeft = holeCount;
@@ -46,7 +46,7 @@ function generateLayoutStructure(rowCount: number, holeCount: number) {
     for (let h = 0; h < holesInThisRow; h++) {
       holes.push({
         holeNumber: holeNumber,
-        status: 'EMPTY',
+        status: 'PLANTED',
         rowNumber: row,
         plantHealth: 'Healthy',
       });
@@ -54,8 +54,8 @@ function generateLayoutStructure(rowCount: number, holeCount: number) {
     }
     layout.push({
       rowNumber: row,
-      length: 0,
-      spacing: 0,
+      length: rowLength,
+      spacing: rowSpacing,
       holes,
     });
     holesLeft -= holesInThisRow;
@@ -73,6 +73,19 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
   const [farms, setFarms] = useState<Farm[]>([])
   const [farmsLoading, setFarmsLoading] = useState(false)
   const [farmsError, setFarmsError] = useState<string | null>(null)
+
+  // Extract row length and spacing from layoutStructure if available
+  const [rowLength, setRowLength] = useState<number>(
+    Array.isArray(initialData?.layoutStructure) && initialData?.layoutStructure.length > 0
+      ? initialData.layoutStructure[0].length || 0
+      : 0
+  );
+  
+  const [rowSpacing, setRowSpacing] = useState<number>(
+    Array.isArray(initialData?.layoutStructure) && initialData?.layoutStructure.length > 0
+      ? initialData.layoutStructure[0].spacing || 0
+      : 0
+  );
 
   const defaultValues: Partial<PlotFormValues> = {
     name: initialData?.name || "",
@@ -115,13 +128,14 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
     }
   }, [farmId, form])
 
-  // Layout generation
+  // Layout generation with row length and spacing
   const rowCount = Number(form.watch('rowCount') ?? 0)
   const holeCount = Number(form.watch('holeCount') ?? 0)
+  
   useEffect(() => {
     if (rowCount > 0 && holeCount > 0) {
       try {
-        const layout = generateLayoutStructure(rowCount, holeCount)
+        const layout = generateLayoutStructure(rowCount, holeCount, rowLength, rowSpacing)
         form.setValue('layoutStructure', layout, { shouldValidate: false })
       } catch (error) {
         console.error("Error generating layout:", error)
@@ -129,7 +143,7 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
     } else {
       form.setValue('layoutStructure', [], { shouldValidate: false })
     }
-  }, [rowCount, holeCount, form])
+  }, [rowCount, holeCount, rowLength, rowSpacing, form])
 
   const layoutStructure = form.watch('layoutStructure') ?? []
 
@@ -160,7 +174,15 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
     setIsSubmitting(true)
     
     try {
-      // Ensure all values are of the correct type
+      // Regenerate layout structure with current rowLength and rowSpacing
+      const updatedLayoutStructure = generateLayoutStructure(
+        Number(values.rowCount) || 0,
+        Number(values.holeCount) || 0,
+        rowLength,
+        rowSpacing
+      );
+      
+      // Ensure all values are of the correct type and explicitly include dateEstablished
       const payload = {
         ...values,
         area: Number(values.area),
@@ -168,12 +190,14 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
         holeCount: Number(values.holeCount),
         plantCount: Number(values.plantCount),
         farmId: String(values.farmId),
-        layoutStructure: Array.isArray(values.layoutStructure) ? values.layoutStructure : [],
+        dateEstablished: values.dateEstablished, // Make sure we include the exact date object
+        layoutStructure: updatedLayoutStructure,
       }
       
       console.log("Calling server action with payload:", {
         isEditing,
         plotId: initialData?.id,
+        dateEstablished: payload.dateEstablished, // Log date for debugging
         payload
       })
       
@@ -387,7 +411,13 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
                     <Calendar
                       mode="single"
                       selected={field.value}
-                      onSelect={field.onChange}
+                      onSelect={(date) => {
+                        // Ensure we're passing a valid Date object
+                        if (date) {
+                          console.log("Date selected:", date);
+                          field.onChange(date);
+                        }
+                      }}
                       disabled={(date) => date > new Date()}
                       initialFocus
                     />
@@ -439,35 +469,81 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
           )}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField
-            control={form.control}
-            name="rowCount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Row Count</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="Number of rows" {...field} value={field.value ?? 0} />
-                </FormControl>
-                <FormDescription>Total number of rows in this plot</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="holeCount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Hole Count</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="Number of holes" {...field} value={field.value ?? 0} />
-                </FormControl>
-                <FormDescription>Total number of holes in this plot</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        {/* Row Settings - Grouped the related fields together */}
+        <div className="space-y-4">
+          <h3 className="font-medium text-sm text-gray-700">Row Configuration</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="rowCount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Row Count</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="Number of rows" {...field} value={field.value ?? 0} />
+                  </FormControl>
+                  <FormDescription>Total number of rows in this plot</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="holeCount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Hole Count</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="Number of holes" {...field} value={field.value ?? 0} />
+                  </FormControl>
+                  <FormDescription>Total number of holes in this plot</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Row Length Input (not connected to form state) */}
+            <div className="space-y-2">
+              <label htmlFor="rowLength" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Row Length (meters)
+              </label>
+              <Input
+                id="rowLength"
+                type="number"
+                step="0.1"
+                placeholder="Length of each row"
+                value={rowLength}
+                onChange={(e) => setRowLength(parseFloat(e.target.value) || 0)}
+                className="mt-1"
+              />
+              <p className="text-sm text-muted-foreground">
+                The length of each row in meters
+              </p>
+            </div>
+            
+            {/* Row Spacing Input (not connected to form state) */}
+            <div className="space-y-2">
+              <label htmlFor="rowSpacing" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Row Spacing (meters)
+              </label>
+              <Input
+                id="rowSpacing"
+                type="number"
+                step="0.1"
+                placeholder="Space between rows"
+                value={rowSpacing}
+                onChange={(e) => setRowSpacing(parseFloat(e.target.value) || 0)}
+                className="mt-1"
+              />
+              <p className="text-sm text-muted-foreground">
+                The spacing between rows in meters
+              </p>
+            </div>
+          </div>
+          
           <FormField
             control={form.control}
             name="plantCount"
@@ -475,7 +551,7 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
               <FormItem>
                 <FormLabel>Plant Count</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="Number of plants" {...field} />
+                  <Input type="number" placeholder="Number of plants" {...field} value={field.value ?? 0} />
                 </FormControl>
                 <FormDescription>Total number of plants in this plot</FormDescription>
                 <FormMessage />
@@ -484,14 +560,16 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
           />
         </div>
         
-        {/* Layout preview */}
+        {/* Layout preview - Enhanced to show row length and spacing */}
         <div className="border rounded p-4 bg-gray-50 mt-4">
           <h3 className="font-semibold mb-2">Layout Preview</h3>
           {Array.isArray(layoutStructure) && layoutStructure.length > 0 ? (
             <ul className="text-xs max-h-40 overflow-auto">
               {layoutStructure.map((row, i) => (
-                <li key={i}>
-                  Row {row.rowNumber}: {Array.isArray(row.holes) ? row.holes.length : 0} holes
+                <li key={i} className="mb-1">
+                  Row {row.rowNumber}: {Array.isArray(row.holes) ? row.holes.length : 0} holes, 
+                  {row.length > 0 ? ` ${row.length}m length` : ' No length set'}, 
+                  {row.spacing > 0 ? ` ${row.spacing}m spacing` : ' No spacing set'}
                 </li>
               ))}
             </ul>
@@ -529,6 +607,8 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
                 <p>Form State: {form.formState.isDirty ? "Dirty" : "Pristine"}</p>
                 <p>Submission State: {isSubmitting ? "Submitting" : "Idle"}</p>
                 <p>Validation Errors: {Object.keys(form.formState.errors).length}</p>
+                <p>Row Length: {rowLength}m, Row Spacing: {rowSpacing}m</p>
+                <p>Date Established: {form.getValues("dateEstablished")?.toISOString()}</p>
               </div>
             </details>
           </div>
