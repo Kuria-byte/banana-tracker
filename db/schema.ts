@@ -134,6 +134,7 @@ export const growthRecords: any = pgTable("growth_records", {
   holeNumber: integer("hole_number"),
   isMainPlant: boolean("is_main_plant").default(true),
   parentPlantId: integer("parent_plant_id").references(() => growthRecords.id),
+  replacedPlantId: integer("replaced_plant_id").references(() => growthRecords.id),
 })
 
 // Farm inspections
@@ -191,6 +192,7 @@ export const harvestRecords = pgTable("harvest_records", {
   weight: decimal("weight"),
   quality: varchar("quality", { length: 32 }).default("AVERAGE"),
   notes: text("notes"),
+  growthRecordIds: json("growth_record_ids"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })

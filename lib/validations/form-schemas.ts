@@ -47,13 +47,13 @@ export const plotFormSchema = z.object({
           status: z.string(),
           rowNumber: z.number(),
           plantHealth: z.string(),
-          // Enhanced banana lifecycle tracking fields
           mainPlantId: z.number().optional(),
           activePlantIds: z.array(z.number()).optional(),
           targetSuckerCount: z.number().optional(),
           currentSuckerCount: z.number().optional(),
           plantedDate: z.string().optional(),
           notes: z.string().optional(),
+          suckerIds: z.array(z.number()).optional(),
         })
       ),
       notes: z.string().optional(),
@@ -172,7 +172,7 @@ export const harvestFormSchema = z.object({
   farmId: z.string().min(1),
   plotId: z.string().min(1),
   userId: z.string().min(1),
-  harvestTeam: z.array(z.string()), // or a more detailed object
+  harvestTeam: z.array(z.string()),
   harvestDate: z.date(),
   bunchCount: z.number().int().min(1),
   totalWeight: z.number().min(0),
@@ -182,6 +182,7 @@ export const harvestFormSchema = z.object({
     rowNumber: z.number(),
     holeNumber: z.number(),
   })).min(1, "Select at least one hole to record a harvest."),
+  growthRecordIds: z.array(z.number()).optional(), // New: array of growth record IDs
 })
 
 export type HarvestFormValues = z.infer<typeof harvestFormSchema>

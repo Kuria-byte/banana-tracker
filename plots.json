@@ -1,1 +1,311 @@
-[{"id":22,"name":"Plot 7","farm_id":53,"area":"1.5","planted_date":"2025-05-10 09:50:43.545","crop_type":"BANANA","status":"ACTIVE","holes":0,"created_at":"2025-05-10 09:58:36.449795","updated_at":"2025-05-10 09:58:36.449795","row_count":4,"plant_count":20,"layout_structure":[{"holes":[{"notes":"Test","status":"PLANTED","rowNumber":1,"holeNumber":1,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":1,"holeNumber":2,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":1,"holeNumber":3,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":1,"holeNumber":4,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":1,"holeNumber":5,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1}],"notes":"","length":10,"spacing":1.2,"rowNumber":1},{"holes":[{"notes":"Test","status":"PLANTED","rowNumber":2,"holeNumber":6,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":2,"holeNumber":7,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":2,"holeNumber":8,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":2,"holeNumber":9,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":2,"holeNumber":10,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1}],"notes":"","length":10,"spacing":1.2,"rowNumber":2},{"holes":[{"notes":"Test","status":"PLANTED","rowNumber":3,"holeNumber":11,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":3,"holeNumber":12,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":3,"holeNumber":13,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":3,"holeNumber":14,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":3,"holeNumber":15,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1}],"notes":"","length":10,"spacing":1.2,"rowNumber":3},{"holes":[{"notes":"Test","status":"PLANTED","rowNumber":4,"holeNumber":16,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":4,"holeNumber":17,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":4,"holeNumber":18,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":4,"holeNumber":19,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1},{"notes":"Test","status":"PLANTED","rowNumber":4,"holeNumber":20,"plantHealth":"Healthy","plantedDate":"2025-05-10","activePlantIds":[],"targetSuckerCount":3,"currentSuckerCount":1}],"notes":"","length":10,"spacing":1.2,"rowNumber":4}],"soil_type":"Loamy"}]
+[
+  {
+    "id": 27,
+    "name": "Ya Mwisho",
+    "farm_id": 53,
+    "area": "1.4",
+    "planted_date": "2025-05-08 21:00:00",
+    "crop_type": "BANANA",
+    "status": "ACTIVE",
+    "holes": 0,
+    "created_at": "2025-05-10 15:50:37.926613",
+    "updated_at": "2025-05-10 15:51:09.655",
+    "row_count": 4,
+    "plant_count": 80,
+    "layout_structure": [
+      {
+        "holes": [
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 1,
+            "suckerIds": [705, 706, 707],
+            "holeNumber": 1,
+            "mainPlantId": 704,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [704, 705, 706, 707],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 1,
+            "suckerIds": [709, 710, 711],
+            "holeNumber": 2,
+            "mainPlantId": 708,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [708, 709, 710, 711],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 1,
+            "suckerIds": [713, 714, 715],
+            "holeNumber": 3,
+            "mainPlantId": 712,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [712, 713, 714, 715],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 1,
+            "suckerIds": [717, 718, 719],
+            "holeNumber": 4,
+            "mainPlantId": 716,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [716, 717, 718, 719],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 1,
+            "suckerIds": [721, 722, 723],
+            "holeNumber": 5,
+            "mainPlantId": 720,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [720, 721, 722, 723],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          }
+        ],
+        "notes": "",
+        "length": 5.8,
+        "spacing": 2,
+        "rowNumber": 1
+      },
+      {
+        "holes": [
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 2,
+            "suckerIds": [725, 726, 727],
+            "holeNumber": 6,
+            "mainPlantId": 724,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [724, 725, 726, 727],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 2,
+            "suckerIds": [729, 730, 731],
+            "holeNumber": 7,
+            "mainPlantId": 728,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [728, 729, 730, 731],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 2,
+            "suckerIds": [733, 734, 735],
+            "holeNumber": 8,
+            "mainPlantId": 732,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [732, 733, 734, 735],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 2,
+            "suckerIds": [737, 738, 739],
+            "holeNumber": 9,
+            "mainPlantId": 736,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [736, 737, 738, 739],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 2,
+            "suckerIds": [741, 742, 743],
+            "holeNumber": 10,
+            "mainPlantId": 740,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [740, 741, 742, 743],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          }
+        ],
+        "notes": "",
+        "length": 5.8,
+        "spacing": 2,
+        "rowNumber": 2
+      },
+      {
+        "holes": [
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 3,
+            "suckerIds": [745, 746, 747],
+            "holeNumber": 11,
+            "mainPlantId": 744,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [744, 745, 746, 747],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 3,
+            "suckerIds": [749, 750, 751],
+            "holeNumber": 12,
+            "mainPlantId": 748,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [748, 749, 750, 751],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 3,
+            "suckerIds": [753, 754, 755],
+            "holeNumber": 13,
+            "mainPlantId": 752,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [752, 753, 754, 755],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 3,
+            "suckerIds": [757, 758, 759],
+            "holeNumber": 14,
+            "mainPlantId": 756,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [756, 757, 758, 759],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 3,
+            "suckerIds": [761, 762, 763],
+            "holeNumber": 15,
+            "mainPlantId": 760,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [760, 761, 762, 763],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          }
+        ],
+        "notes": "",
+        "length": 5.8,
+        "spacing": 2,
+        "rowNumber": 3
+      },
+      {
+        "holes": [
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 4,
+            "suckerIds": [765, 766, 767],
+            "holeNumber": 16,
+            "mainPlantId": 764,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [764, 765, 766, 767],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 4,
+            "suckerIds": [769, 770, 771],
+            "holeNumber": 17,
+            "mainPlantId": 768,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [768, 769, 770, 771],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 4,
+            "suckerIds": [773, 774, 775],
+            "holeNumber": 18,
+            "mainPlantId": 772,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [772, 773, 774, 775],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 4,
+            "suckerIds": [777, 778, 779],
+            "holeNumber": 19,
+            "mainPlantId": 776,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [776, 777, 778, 779],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          },
+          {
+            "notes": "ya mwisho",
+            "status": "PLANTED",
+            "rowNumber": 4,
+            "suckerIds": [781, 782, 783],
+            "holeNumber": 20,
+            "mainPlantId": 780,
+            "plantHealth": "Healthy",
+            "plantedDate": "2025-05-09",
+            "activePlantIds": [780, 781, 782, 783],
+            "targetSuckerCount": 3,
+            "currentSuckerCount": 3
+          }
+        ],
+        "notes": "",
+        "length": 5.8,
+        "spacing": 2,
+        "rowNumber": 4
+      }
+    ],
+    "soil_type": "Clay"
+  }
+]

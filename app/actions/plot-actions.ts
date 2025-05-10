@@ -12,14 +12,38 @@ export async function addPlot(values: PlotFormValues) {
     // Create the plot in the database (with fallback to mock data)
     const newPlot = await plotRepository.createPlot(values)
 
+    // Prepare a deep copy of the layout to update mainPlantId/activePlantIds/suckerIds
+    let updatedLayout = Array.isArray(values.layoutStructure)
+      ? values.layoutStructure.map(row => ({
+          ...row,
+          holes: row.holes.map(hole => ({
+            ...hole,
+            status: String(hole.status),
+            plantHealth: hole.plantHealth ? String(hole.plantHealth) : "Healthy",
+            suckerIds: Array.isArray(hole.suckerIds) ? hole.suckerIds : [],
+            mainPlantId: hole.mainPlantId,
+            activePlantIds: hole.activePlantIds ?? [],
+            targetSuckerCount: hole.targetSuckerCount ?? 3,
+            currentSuckerCount: hole.currentSuckerCount ?? 0,
+            plantedDate: hole.plantedDate,
+            notes: hole.notes ?? '',
+            rowNumber: hole.rowNumber,
+            holeNumber: hole.holeNumber,
+          })) as any // type assertion for compatibility
+        })) as any // type assertion for compatibility
+      : [];
+
+    let totalPlants = 0;
+
     // After plot creation, create initial growth records for each PLANTED hole
-    if (Array.isArray(values.layoutStructure)) {
-      for (const row of values.layoutStructure) {
+    if (Array.isArray(updatedLayout)) {
+      for (const row of updatedLayout) {
         if (!Array.isArray(row.holes)) continue;
         for (const hole of row.holes) {
           if (hole.status === "PLANTED") {
             try {
-              await createGrowthRecord({
+              // Create main plant growth record
+              const mainGrowthRecord = await createGrowthRecord({
                 farmId: Number(values.farmId),
                 plotId: newPlot.id,
                 rowNumber: row.rowNumber,
@@ -30,6 +54,29 @@ export async function addPlot(values: PlotFormValues) {
                 notes: hole.notes || undefined,
                 metrics: {},
               })
+              hole.mainPlantId = mainGrowthRecord.id;
+              // Generate suckers
+              const suckerCount = hole.currentSuckerCount ?? 0;
+              const suckerIds: number[] = [];
+              for (let i = 0; i < suckerCount; i++) {
+                const suckerGrowthRecord = await createGrowthRecord({
+                  farmId: Number(values.farmId),
+                  plotId: newPlot.id,
+                  rowNumber: row.rowNumber,
+                  holeNumber: hole.holeNumber,
+                  isMainPlant: false,
+                  parentPlantId: mainGrowthRecord.id,
+                  stage: "Sucker",
+                  recordDate: hole.plantedDate ? new Date(hole.plantedDate) : new Date(),
+                  notes: hole.notes || undefined,
+                  metrics: {},
+                })
+                suckerIds.push(suckerGrowthRecord.id)
+              }
+              hole.suckerIds = suckerIds
+              hole.activePlantIds = [mainGrowthRecord.id, ...suckerIds]
+              hole.currentSuckerCount = suckerIds.length
+              totalPlants += 1 + suckerIds.length
             } catch (err) {
               console.error(`Failed to create growth record for row ${row.rowNumber}, hole ${hole.holeNumber}:`, err)
               // Continue with other holes
@@ -37,6 +84,14 @@ export async function addPlot(values: PlotFormValues) {
           }
         }
       }
+      // Update the plot's layoutStructure in the DB with mainPlantId/activePlantIds/suckerIds
+      await updatePlotLayout(newPlot.id, updatedLayout)
+      // Update plant_count in the plot
+      await plotRepository.updatePlot(newPlot.id, {
+        ...values,
+        plantCount: totalPlants,
+        layoutStructure: updatedLayout,
+      })
     }
 
     // Revalidate the farm page to show the new plot
@@ -45,7 +100,7 @@ export async function addPlot(values: PlotFormValues) {
 
     return {
       success: true,
-      message: "Plot added successfully! Initial growth records created for planted holes.",
+      message: "Plot added successfully! Initial growth records created for planted holes (including suckers).",
       plot: newPlot,
     }
   } catch (error) {

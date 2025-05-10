@@ -766,9 +766,9 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
                 <li key={i} className="mb-1 border-b pb-2">
                   <div className="flex items-center justify-between">
                     <span>
-                      Row {row.rowNumber}: {Array.isArray(row.holes) ? row.holes.length : 0} holes,
-                      {row.length > 0 ? ` ${row.length}m length` : ' No length set'},
-                      {row.spacing > 0 ? ` ${row.spacing}m spacing` : ' No spacing set'}
+                  Row {row.rowNumber}: {Array.isArray(row.holes) ? row.holes.length : 0} holes, 
+                  {row.length > 0 ? ` ${row.length}m length` : ' No length set'}, 
+                  {row.spacing > 0 ? ` ${row.spacing}m spacing` : ' No spacing set'}
                     </span>
                     <Button
                       type="button"

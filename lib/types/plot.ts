@@ -5,6 +5,7 @@ export interface HoleData {
   // Banana lifecycle tracking fields
   mainPlantId?: number; // growth record id for main plant
   activePlantIds?: number[]; // all active plant growth record ids (main + suckers)
+  suckerIds?: number[]; // Explicitly track suckers (growth record ids)
   targetSuckerCount?: number; // how many suckers to maintain
   currentSuckerCount?: number; // current count of active suckers
   plantedDate?: string; // ISO date string
@@ -35,4 +36,8 @@ export interface Plot {
   plantedDate?: string;
   cropType?: string;
   status?: string;
+}
+
+export interface Harvest {
+  // ... existing fields ...
 } 

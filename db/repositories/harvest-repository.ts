@@ -14,6 +14,7 @@ export interface Harvest {
   totalWeight: number | string;
   qualityRating: string;
   notes: string;
+  growthRecordIds?: number[]; // Only keep the new array field
 }
 
 export async function getAllHarvests(): Promise<Harvest[]> {
@@ -31,6 +32,7 @@ export async function createHarvestRecord(data: {
   totalWeight: number | string;
   qualityRating: string;
   notes?: string;
+  growthRecordIds?: number[];
 }): Promise<Harvest> {
   const [created] = await db
     .insert(harvestRecords)
@@ -44,6 +46,7 @@ export async function createHarvestRecord(data: {
       weight: typeof data.totalWeight === 'number' ? data.totalWeight.toString() : data.totalWeight,
       quality: data.qualityRating,
       notes: data.notes,
+      growthRecordIds: data.growthRecordIds,
     })
     .returning();
   return harvestDbToModel(created);
@@ -59,6 +62,7 @@ export async function updateHarvestRecord(id: number, data: Partial<{
   totalWeight: number | string;
   qualityRating: string;
   notes?: string;
+  growthRecordIds?: number[];
 }>): Promise<Harvest | null> {
   const updateData: any = {};
   if (data.farmId !== undefined) updateData.farmId = data.farmId;
@@ -70,6 +74,7 @@ export async function updateHarvestRecord(id: number, data: Partial<{
   if (data.totalWeight !== undefined) updateData.weight = typeof data.totalWeight === 'number' ? data.totalWeight.toString() : data.totalWeight;
   if (data.qualityRating) updateData.quality = data.qualityRating;
   if (data.notes) updateData.notes = data.notes;
+  if (data.growthRecordIds !== undefined) updateData.growthRecordIds = data.growthRecordIds;
 
   const [updated] = await db
     .update(harvestRecords)
@@ -91,5 +96,6 @@ function harvestDbToModel(dbHarvest: any): Harvest {
     totalWeight: dbHarvest.weight !== undefined && dbHarvest.weight !== null && !isNaN(Number(dbHarvest.weight)) ? Number(dbHarvest.weight) : 0,
     qualityRating: dbHarvest.quality ?? "",
     notes: dbHarvest.notes ?? "",
+    growthRecordIds: Array.isArray(dbHarvest.growthRecordIds) ? dbHarvest.growthRecordIds : (dbHarvest.growthRecordIds ? JSON.parse(dbHarvest.growthRecordIds) : undefined),
   };
 } 

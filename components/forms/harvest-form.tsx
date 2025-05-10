@@ -581,6 +581,47 @@ export function HarvestForm({ initialData, onSuccess, users, plots, farmId }: Ha
           </div>
         )}
 
+        {/* Show selected holes and their growth record IDs (mainPlantId) */}
+        {selectedPlot && form.watch("selectedHoles")?.length > 0 && (
+          <div className="my-4 p-3 bg-gray-50 border rounded">
+            <div className="font-semibold mb-2">Selected Holes & Harvested Plants</div>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              {form.watch("selectedHoles").map((sel, idx) => {
+                const row = selectedPlot.layoutStructure.find(r => r.rowNumber === sel.rowNumber)
+                const hole = row?.holes.find(h => h.holeNumber === sel.holeNumber)
+                return (
+                  <li key={idx} className="flex items-center gap-2 text-xs">
+                    <span className="font-medium">Row {sel.rowNumber}, Hole {sel.holeNumber}</span>
+                    {hole?.mainPlantId && (
+                      <span className="ml-2 px-2 py-0.5 bg-green-100 border border-green-400 rounded text-green-800" title={`Growth Record ID: ${hole.mainPlantId}`}>
+                        Plant ID: {hole.mainPlantId}
+                      </span>
+                    )}
+                    {/* Optional: Show more details about the plant */}
+                    {hole?.mainPlantId && (
+                      <span className="ml-2 text-gray-500" title={`Health: ${hole.plantHealth || 'Unknown'}\nStatus: ${hole.status}`}>ℹ️</span>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
+
+        {/* After successful submission, display harvested plant IDs if available */}
+        {success && debugInfo?.growthRecordIds && debugInfo.growthRecordIds.length > 0 && (
+          <div className="my-4 p-3 bg-green-50 border rounded">
+            <div className="font-semibold mb-2">Harvested Plant IDs</div>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              {debugInfo.growthRecordIds.map((id: number, idx: number) => (
+                <li key={idx} className="flex items-center gap-2 text-xs">
+                  <span className="font-mono">{id}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="flex justify-end gap-4">
           {onSuccess && (
             <Button type="button" variant="outline" onClick={onSuccess} disabled={isSubmitting}>

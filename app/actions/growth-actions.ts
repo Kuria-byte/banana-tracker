@@ -3,25 +3,70 @@
 import { revalidatePath } from "next/cache"
 import type { GrowthFormValues } from "@/lib/validations/form-schemas"
 import { createGrowthRecord, updateGrowthRecord as repoUpdateGrowthRecord } from "@/db/repositories/growth-records-repository"
+import { getPlotById, updatePlotLayout } from "@/db/repositories/plot-repository"
 
 export async function recordGrowth(values: GrowthFormValues) {
   try {
+    const plotId = Number(values.plotId)
+    const plot = await getPlotById(plotId)
+    if (!plot) throw new Error("Plot not found")
+    let updatedLayout = Array.isArray(plot.layoutStructure)
+      ? plot.layoutStructure.map(row => ({
+          ...row,
+          holes: row.holes.map(hole => ({
+            ...hole,
+            status: hole.status as 'PLANTED' | 'EMPTY' | 'HARVESTED',
+            plantHealth: hole.plantHealth as 'Healthy' | 'Diseased' | 'Pest-affected' | 'Damaged' | undefined,
+          }))
+        }))
+      : [];
     // Handle bulk planting if isNewPlanting is true
     if (values.isNewPlanting && values.plantCount && values.plantCount > 1) {
-      // Create multiple plant records
-      for (let i = 0; i < values.plantCount; i++) {
-        await createGrowthRecord({
-          ...values,
-          isMainPlant: true,
-          rowNumber: values.rowId ? Number(values.rowId) : undefined,
-          // Optionally, assign holeNumber if available
-        })
+      let createdCount = 0;
+      for (const row of updatedLayout) {
+        for (const hole of row.holes) {
+          if (hole.status === "EMPTY" && createdCount < values.plantCount) {
+            const growthRecord = await createGrowthRecord({
+              ...values,
+              isMainPlant: true,
+              rowNumber: row.rowNumber,
+              holeNumber: hole.holeNumber,
+            })
+            hole.status = "PLANTED"
+            hole.mainPlantId = growthRecord.id
+            hole.activePlantIds = [growthRecord.id]
+            createdCount++
+          }
+        }
+        if (createdCount >= values.plantCount) break;
       }
+      await updatePlotLayout(plotId, updatedLayout)
+    } else if (values.isNewPlanting) {
+      // Single new plant
+      for (const row of updatedLayout) {
+        if (row.rowNumber === Number(values.rowId)) {
+          for (const hole of row.holes) {
+            if (hole.status === "EMPTY") {
+              const growthRecord = await createGrowthRecord({
+                ...values,
+                isMainPlant: true,
+                rowNumber: row.rowNumber,
+                holeNumber: hole.holeNumber,
+              })
+              hole.status = "PLANTED"
+              hole.mainPlantId = growthRecord.id
+              hole.activePlantIds = [growthRecord.id]
+              break;
+            }
+          }
+        }
+      }
+      await updatePlotLayout(plotId, updatedLayout)
     } else {
-      // Add a single growth record
+      // Add a growth record for an existing plant (not new planting)
       await createGrowthRecord({
         ...values,
-        isMainPlant: values.isNewPlanting ?? false,
+        isMainPlant: false,
         rowNumber: values.rowId ? Number(values.rowId) : undefined,
         // Optionally, assign holeNumber if available
       })

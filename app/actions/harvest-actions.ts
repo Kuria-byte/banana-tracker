@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache"
 import { harvestFormSchema, HarvestFormValues } from "@/lib/validations/form-schemas"
 import { createHarvestRecord } from "@/db/repositories/harvest-repository"
 import { getPlotById, updatePlotLayout } from "@/db/repositories/plot-repository"
-import { getAllGrowthRecords, updateGrowthRecord as repoUpdateGrowthRecord } from "@/db/repositories/growth-records-repository"
+import { getAllGrowthRecords, updateGrowthRecord as repoUpdateGrowthRecord, createGrowthRecord } from "@/db/repositories/growth-records-repository"
 
 export async function recordHarvestAction(values: HarvestFormValues) {
   try {
@@ -47,7 +47,9 @@ export async function recordHarvestAction(values: HarvestFormValues) {
     
     console.log(`Updating ${selectedHoles.length} holes to HARVESTED status in plot ${plotId}`)
     
-    // Create new layout with updated hole statuses
+    // Build a list of update actions for growth records
+    const growthRecordUpdates: Promise<any>[] = [];
+    const harvestedGrowthRecordIds: number[] = [];
     const newLayout = plot.layoutStructure.map((row) => {
       if (!selectedHoles.some((h) => h.rowNumber === row.rowNumber)) return row
       return {
@@ -55,55 +57,52 @@ export async function recordHarvestAction(values: HarvestFormValues) {
         holes: row.holes.map((hole) => {
           const isSelected = selectedHoles.some(sel => sel.rowNumber === row.rowNumber && sel.holeNumber === hole.holeNumber)
           if (isSelected && hole.status === "PLANTED") {
-            // Promote sucker if available
-            if (hole.activePlantIds && hole.activePlantIds.length > 1) {
-              // Get all growth records for this plot
-              // (Assume mainPlantId is first in activePlantIds, others are suckers)
-              const mainPlantId = hole.mainPlantId
-              const suckerIds = hole.activePlantIds.filter(id => id !== mainPlantId)
-              if (suckerIds.length > 0) {
-                // Promote the first sucker
-                const newMainPlantId = suckerIds[0]
-                // Update growth record for new main plant
-                repoUpdateGrowthRecord(newMainPlantId, { isMainPlant: true, parentPlantId: null })
-                // Optionally, update the old main plant record to mark as harvested
-                if (mainPlantId) repoUpdateGrowthRecord(mainPlantId, { stage: "Harvested" })
-                // Update hole fields
-                return {
-                  ...hole,
-                  status: "HARVESTED" as "HARVESTED",
-                  mainPlantId: newMainPlantId,
-                  activePlantIds: [newMainPlantId, ...suckerIds.slice(1)],
-                  currentSuckerCount: suckerIds.length - 1,
-                }
+            // Collect the mainPlantId for this hole (for harvest record)
+            if (hole.mainPlantId) harvestedGrowthRecordIds.push(hole.mainPlantId)
+            // Sucker management: use explicit suckerIds
+            const mainPlantId = hole.mainPlantId
+            const suckerIds = Array.isArray(hole.suckerIds) ? hole.suckerIds : (hole.activePlantIds ? hole.activePlantIds.filter(id => id !== mainPlantId) : [])
+            if (suckerIds.length > 0) {
+              const newMainPlantId = suckerIds[0]
+              // Promote first sucker to main
+              growthRecordUpdates.push(repoUpdateGrowthRecord(newMainPlantId, { isMainPlant: true, replacedPlantId: mainPlantId }))
+              // Mark old main as harvested
+              if (mainPlantId) growthRecordUpdates.push(repoUpdateGrowthRecord(mainPlantId, { stage: "Harvested", isMainPlant: false }))
+              return {
+                ...hole,
+                status: "PLANTED" as "PLANTED",
+                mainPlantId: newMainPlantId,
+                activePlantIds: [newMainPlantId, ...suckerIds.slice(1)],
+                suckerIds: suckerIds.slice(1),
+                currentSuckerCount: suckerIds.length - 1,
               }
             }
-            // No suckers to promote, just mark as harvested
-            return { ...hole, status: "HARVESTED" as "HARVESTED" }
+            // No suckers to promote, just mark as harvested and clear plant ids
+            if (hole.mainPlantId) growthRecordUpdates.push(repoUpdateGrowthRecord(hole.mainPlantId, { stage: "Harvested", isMainPlant: false }))
+            return { ...hole, status: "HARVESTED" as "HARVESTED", mainPlantId: undefined, activePlantIds: [], suckerIds: [] }
           }
           return { ...hole, status: hole.status as "PLANTED" | "EMPTY" | "HARVESTED" }
         })
       }
     })
-    
+    // Await all growth record updates
+    await Promise.all(growthRecordUpdates)
     // Update the plot layout in the database
     await updatePlotLayout(plotId, newLayout)
-    
-    // 2. Create harvest record
-    const repoData = {
-      ...parsed.data,
-      farmId: Number(parsed.data.farmId),
-      plotId: plotId,
-      userId: parsed.data.userId !== undefined ? Number(parsed.data.userId) : undefined,
-      harvestDate: String(parsed.data.harvestDate),
-      selectedHolesCount: selectedHoles.length,  // Store the count for reference
-    }
-    
-    // Create harvest record in database
-    const harvest = await createHarvestRecord(repoData)
-    if (!harvest) {
-      throw new Error("Failed to create harvest record.")
-    }
+    // Create a single harvest record for all harvested plants
+    await createHarvestRecord({
+      farmId: plot.farmId,
+      plotId: plot.id,
+      userId: parsed.data.userId ? Number(parsed.data.userId) : undefined,
+      harvestTeam: parsed.data.harvestTeam,
+      harvestDate: typeof parsed.data.harvestDate === 'string' ? parsed.data.harvestDate : parsed.data.harvestDate.toISOString(),
+      bunchCount: parsed.data.bunchCount,
+      totalWeight: parsed.data.totalWeight,
+      qualityRating: parsed.data.qualityRating,
+      notes: parsed.data.notes,
+      growthRecordIds: harvestedGrowthRecordIds,
+      // growthRecordId: harvestedGrowthRecordIds[0], // Optionally set for backward compatibility
+    })
     
     // Revalidate relevant paths to refresh UI
     revalidatePath(`/farms/${parsed.data.farmId}`)
@@ -113,7 +112,6 @@ export async function recordHarvestAction(values: HarvestFormValues) {
     return {
       success: true,
       message: `Harvest of ${selectedHoles.length} holes recorded successfully!`,
-      harvest,
     }
   } catch (error) {
     console.error("Error recording harvest:", error)

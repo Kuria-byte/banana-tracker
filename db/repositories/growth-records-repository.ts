@@ -100,6 +100,7 @@ export async function createGrowthRecord(values: any): Promise<any> {
     holeNumber: values.holeNumber,
     isMainPlant: values.isMainPlant,
     parentPlantId: values.parentPlantId,
+    replacedPlantId: values.replacedPlantId,
     createdAt: new Date(),
     updatedAt: new Date(),
   }
@@ -115,7 +116,7 @@ export async function updateGrowthRecord(id: number, values: any): Promise<any> 
     rowNumber: values.rowNumber,
     holeNumber: values.holeNumber,
     isMainPlant: values.isMainPlant,
-    parentPlantId: values.parentPlantId,
+    replacedPlantId: values.replacedPlantId,
     updatedAt: new Date(),
   }
   const result = await db.update(growthRecords).set(recordData).where(eq(growthRecords.id, id)).returning()
