@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { harvestFormSchema, HarvestFormValues } from "@/lib/validations/form-schemas"
 import { createHarvestRecord } from "@/db/repositories/harvest-repository"
 import { getPlotById, updatePlotLayout } from "@/db/repositories/plot-repository"
+import { getAllGrowthRecords, updateGrowthRecord as repoUpdateGrowthRecord } from "@/db/repositories/growth-records-repository"
 
 export async function recordHarvestAction(values: HarvestFormValues) {
   try {
@@ -48,20 +49,37 @@ export async function recordHarvestAction(values: HarvestFormValues) {
     
     // Create new layout with updated hole statuses
     const newLayout = plot.layoutStructure.map((row) => {
-      // Skip rows that don't have any selected holes
       if (!selectedHoles.some((h) => h.rowNumber === row.rowNumber)) return row
-      
       return {
         ...row,
         holes: row.holes.map((hole) => {
-          // Check if this hole is in the selectedHoles array
-          if (selectedHoles.some(sel => sel.rowNumber === row.rowNumber && sel.holeNumber === hole.holeNumber)) {
-            // Only update if hole is currently PLANTED (not already HARVESTED or EMPTY)
-            if (hole.status === "PLANTED") {
-              return { ...hole, status: "HARVESTED" as "HARVESTED" }
+          const isSelected = selectedHoles.some(sel => sel.rowNumber === row.rowNumber && sel.holeNumber === hole.holeNumber)
+          if (isSelected && hole.status === "PLANTED") {
+            // Promote sucker if available
+            if (hole.activePlantIds && hole.activePlantIds.length > 1) {
+              // Get all growth records for this plot
+              // (Assume mainPlantId is first in activePlantIds, others are suckers)
+              const mainPlantId = hole.mainPlantId
+              const suckerIds = hole.activePlantIds.filter(id => id !== mainPlantId)
+              if (suckerIds.length > 0) {
+                // Promote the first sucker
+                const newMainPlantId = suckerIds[0]
+                // Update growth record for new main plant
+                repoUpdateGrowthRecord(newMainPlantId, { isMainPlant: true, parentPlantId: null })
+                // Optionally, update the old main plant record to mark as harvested
+                if (mainPlantId) repoUpdateGrowthRecord(mainPlantId, { stage: "Harvested" })
+                // Update hole fields
+                return {
+                  ...hole,
+                  status: "HARVESTED" as "HARVESTED",
+                  mainPlantId: newMainPlantId,
+                  activePlantIds: [newMainPlantId, ...suckerIds.slice(1)],
+                  currentSuckerCount: suckerIds.length - 1,
+                }
+              }
             }
-            // Keep the status as is, but cast it to the union type
-            return { ...hole, status: hole.status as "PLANTED" | "EMPTY" | "HARVESTED" }
+            // No suckers to promote, just mark as harvested
+            return { ...hole, status: "HARVESTED" as "HARVESTED" }
           }
           return { ...hole, status: hole.status as "PLANTED" | "EMPTY" | "HARVESTED" }
         })

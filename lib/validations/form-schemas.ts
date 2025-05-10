@@ -47,8 +47,16 @@ export const plotFormSchema = z.object({
           status: z.string(),
           rowNumber: z.number(),
           plantHealth: z.string(),
+          // Enhanced banana lifecycle tracking fields
+          mainPlantId: z.number().optional(),
+          activePlantIds: z.array(z.number()).optional(),
+          targetSuckerCount: z.number().optional(),
+          currentSuckerCount: z.number().optional(),
+          plantedDate: z.string().optional(),
+          notes: z.string().optional(),
         })
       ),
+      notes: z.string().optional(),
     })
   ),
 })

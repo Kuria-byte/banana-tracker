@@ -188,8 +188,18 @@ export async function deleteRowFromPlot(plotId: number, rowNumber: number) {
 export async function addHoleToRow(plotId: number, rowNumber: number, hole: HoleData) {
   const plot = await getPlotById(plotId);
   if (!plot) throw new Error("Plot not found");
+  // Ensure enhanced fields are initialized
+  const enhancedHole: HoleData = {
+    ...hole,
+    mainPlantId: hole.mainPlantId ?? undefined,
+    activePlantIds: hole.activePlantIds ?? (hole.mainPlantId ? [hole.mainPlantId] : []),
+    targetSuckerCount: hole.targetSuckerCount ?? 3, // default to 3 if not set
+    currentSuckerCount: hole.currentSuckerCount ?? 0,
+    plantedDate: hole.plantedDate ?? undefined,
+    notes: hole.notes ?? '',
+  };
   const newLayout = plot.layoutStructure.map((row) =>
-    row.rowNumber === rowNumber ? { ...row, holes: [...row.holes, hole] } : row
+    row.rowNumber === rowNumber ? { ...row, holes: [...row.holes, enhancedHole] } : row
   );
   await updatePlotLayout(plotId, newLayout);
 }
@@ -203,7 +213,18 @@ export async function updateHoleInRow(plotId: number, rowNumber: number, holeNum
     return {
       ...row,
       holes: row.holes.map((hole) =>
-        hole.holeNumber === holeNumber ? { ...hole, ...data } : hole
+        hole.holeNumber === holeNumber
+          ? {
+              ...hole,
+              ...data,
+              mainPlantId: data.mainPlantId ?? hole.mainPlantId,
+              activePlantIds: data.activePlantIds ?? hole.activePlantIds ?? (hole.mainPlantId ? [hole.mainPlantId] : []),
+              targetSuckerCount: data.targetSuckerCount ?? hole.targetSuckerCount ?? 3,
+              currentSuckerCount: data.currentSuckerCount ?? hole.currentSuckerCount ?? 0,
+              plantedDate: data.plantedDate ?? hole.plantedDate,
+              notes: data.notes ?? hole.notes ?? '',
+            }
+          : hole
       ),
     };
   });

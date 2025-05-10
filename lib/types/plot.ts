@@ -1,9 +1,15 @@
 export interface HoleData {
   holeNumber: number;
   status: 'EMPTY' | 'PLANTED' | 'HARVESTED';
-  plantHealth?: 'Healthy' | 'Diseased' | 'Pest-affected' | 'Damaged';
   rowNumber: number;
-  // Add more fields as needed (e.g., notes, plantedDate, etc.)
+  // Banana lifecycle tracking fields
+  mainPlantId?: number; // growth record id for main plant
+  activePlantIds?: number[]; // all active plant growth record ids (main + suckers)
+  targetSuckerCount?: number; // how many suckers to maintain
+  currentSuckerCount?: number; // current count of active suckers
+  plantedDate?: string; // ISO date string
+  plantHealth?: 'Healthy' | 'Diseased' | 'Pest-affected' | 'Damaged';
+  notes?: string;
 }
 
 export interface RowData {
@@ -11,7 +17,7 @@ export interface RowData {
   length: number;    // meters
   spacing: number;   // meters
   holes: HoleData[];
-  // Add more fields as needed (e.g., notes)
+  notes?: string; // Additional notes for the row
 }
 
 export interface Plot {

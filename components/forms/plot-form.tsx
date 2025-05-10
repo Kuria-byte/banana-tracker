@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { CalendarIcon, Loader2 } from "lucide-react"
+import { CalendarIcon, Loader2, Settings } from "lucide-react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 
@@ -33,36 +33,6 @@ interface PlotFormProps {
   onSuccess?: () => void
 }
 
-// Updated utility to include row length and spacing
-function generateLayoutStructure(rowCount: number, holeCount: number, rowLength: number, rowSpacing: number) {
-  if (!rowCount || !holeCount) return [];
-  const holesPerRow = Math.ceil(holeCount / rowCount);
-  let holesLeft = holeCount;
-  const layout = [];
-  let holeNumber = 1;
-  for (let row = 1; row <= rowCount; row++) {
-    const holesInThisRow = Math.min(holesPerRow, holesLeft);
-    const holes = [];
-    for (let h = 0; h < holesInThisRow; h++) {
-      holes.push({
-        holeNumber: holeNumber,
-        status: 'PLANTED',
-        rowNumber: row,
-        plantHealth: 'Healthy',
-      });
-      holeNumber++;
-    }
-    layout.push({
-      rowNumber: row,
-      length: rowLength,
-      spacing: rowSpacing,
-      holes,
-    });
-    holesLeft -= holesInThisRow;
-  }
-  return layout;
-}
-
 export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -87,6 +57,18 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
       : 0
   );
 
+  // Track expanded rows for UI
+  const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
+
+  // Define bulk settings state with defaults
+  const [bulkSettings, setBulkSettings] = useState({
+    targetSuckerCount: 3,
+    currentSuckerCount: 0,
+    plantedDate: '',
+    notes: '',
+  });
+
+  // Move defaultValues above useForm
   const defaultValues: Partial<PlotFormValues> = {
     name: initialData?.name || "",
     farmId: farmId || initialData?.farmId || "",
@@ -101,16 +83,108 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
     layoutStructure: Array.isArray(initialData?.layoutStructure) ? initialData.layoutStructure : [],
   }
 
-  // Log initial form values for debugging
-  useEffect(() => {
-    console.log("PlotForm initialized with values:", defaultValues)
-  }, [])
-
+  // useForm hook (only declare once)
   const form = useForm<PlotFormValues>({
     resolver: zodResolver(plotFormSchema),
     defaultValues,
     mode: "onChange", // Validate on change for better user feedback
   })
+
+  // Initialize plantedDate in bulkSettings once dateEstablished is available
+  useEffect(() => {
+    const dateEstablished = form.watch('dateEstablished');
+    if (dateEstablished) {
+      setBulkSettings(prev => ({
+        ...prev,
+        plantedDate: format(dateEstablished, 'yyyy-MM-dd')
+      }));
+    }
+  }, [form.watch('dateEstablished')]);
+
+  // Function to apply bulk settings to all holes or a specific row
+  const applyBulkSetting = (field: string, value: any, rowNumber: number | null = null) => {
+    try {
+      const currentLayout = form.getValues('layoutStructure') || [];
+      
+      const updatedLayout = currentLayout.map(row => {
+        // Skip rows that don't match the target row (if specified)
+        if (rowNumber !== null && row.rowNumber !== rowNumber) return row;
+        
+        return {
+          ...row,
+          holes: row.holes.map(hole => ({
+            ...hole,
+            [field]: value
+          }))
+        };
+      });
+      
+      form.setValue('layoutStructure', updatedLayout, { shouldValidate: false });
+      
+      toast({
+        title: "Settings Applied",
+        description: rowNumber 
+          ? `Applied ${field} to all holes in row ${rowNumber}` 
+          : `Applied ${field} to all holes in the plot`,
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error(`Error applying bulk setting ${field}:`, error);
+      toast({
+        title: "Error",
+        description: "Failed to apply settings. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Updated layout generation function that incorporates bulk settings
+  function generateLayoutStructure(rowCount: number, holeCount: number, rowLength: number, rowSpacing: number) {
+    if (!rowCount || !holeCount) return [];
+    const holesPerRow = Math.ceil(holeCount / rowCount);
+    let holesLeft = holeCount;
+    const layout = [];
+    let holeNumber = 1;
+    
+    // Get date for planted date
+    const defaultDate = form.getValues('dateEstablished') 
+      ? format(form.getValues('dateEstablished'), 'yyyy-MM-dd')
+      : bulkSettings.plantedDate || format(new Date(), 'yyyy-MM-dd');
+    
+    for (let row = 1; row <= rowCount; row++) {
+      const holesInThisRow = Math.min(holesPerRow, holesLeft);
+      const holes = [];
+      for (let h = 0; h < holesInThisRow; h++) {
+        holes.push({
+          holeNumber: holeNumber,
+          status: 'PLANTED',
+          rowNumber: row,
+          plantHealth: 'Healthy',
+          mainPlantId: undefined,
+          activePlantIds: [],
+          targetSuckerCount: bulkSettings.targetSuckerCount,
+          currentSuckerCount: bulkSettings.currentSuckerCount,
+          plantedDate: defaultDate,
+          notes: bulkSettings.notes || '',
+        });
+        holeNumber++;
+      }
+      layout.push({
+        rowNumber: row,
+        length: rowLength,
+        spacing: rowSpacing,
+        holes,
+        notes: '',
+      });
+      holesLeft -= holesInThisRow;
+    }
+    return layout;
+  }
+
+  // Log initial form values for debugging
+  useEffect(() => {
+    console.log("PlotForm initialized with values:", defaultValues)
+  }, [])
 
   // Debug form errors
   useEffect(() => {
@@ -143,7 +217,7 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
     } else {
       form.setValue('layoutStructure', [], { shouldValidate: false })
     }
-  }, [rowCount, holeCount, rowLength, rowSpacing, form])
+  }, [rowCount, holeCount, rowLength, rowSpacing, form, bulkSettings])
 
   const layoutStructure = form.watch('layoutStructure') ?? []
 
@@ -416,6 +490,11 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
                         if (date) {
                           console.log("Date selected:", date);
                           field.onChange(date);
+                          // Also update the bulk plantedDate when dateEstablished changes
+                          setBulkSettings(prev => ({
+                            ...prev, 
+                            plantedDate: format(date, 'yyyy-MM-dd')
+                          }));
                         }
                       }}
                       disabled={(date) => date > new Date()}
@@ -560,16 +639,295 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
           />
         </div>
         
+        {/* Bulk Hole Configuration */}
+        {rowCount > 0 && holeCount > 0 && (
+          <div className="space-y-4 border rounded p-4 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold flex items-center">
+                <Settings className="h-4 w-4 mr-2" />
+                Bulk Hole Configuration
+              </h3>
+              <p className="text-xs text-gray-500">Set values for all holes at once</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+              <div className="space-y-2">
+                <label htmlFor="bulkTargetSuckers" className="text-sm font-medium">
+                  Target Sucker Count
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    id="bulkTargetSuckers"
+                    type="number"
+                    min={0}
+                    max={5}
+                    value={bulkSettings.targetSuckerCount}
+                    onChange={(e) => setBulkSettings({
+                      ...bulkSettings,
+                      targetSuckerCount: parseInt(e.target.value) || 0
+                    })}
+                  />
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => applyBulkSetting('targetSuckerCount', bulkSettings.targetSuckerCount)}
+                  >
+                    Apply to All
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="bulkCurrentSuckers" className="text-sm font-medium">
+                  Current Sucker Count
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    id="bulkCurrentSuckers"
+                    type="number"
+                    min={0}
+                    value={bulkSettings.currentSuckerCount}
+                    onChange={(e) => setBulkSettings({
+                      ...bulkSettings,
+                      currentSuckerCount: parseInt(e.target.value) || 0
+                    })}
+                  />
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => applyBulkSetting('currentSuckerCount', bulkSettings.currentSuckerCount)}
+                  >
+                    Apply to All
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="bulkPlantedDate" className="text-sm font-medium">
+                  Planted Date
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    id="bulkPlantedDate"
+                    type="date"
+                    value={bulkSettings.plantedDate || ''}
+                    onChange={(e) => setBulkSettings({
+                      ...bulkSettings,
+                      plantedDate: e.target.value
+                    })}
+                  />
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => applyBulkSetting('plantedDate', bulkSettings.plantedDate)}
+                  >
+                    Apply to All
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="bulkNotes" className="text-sm font-medium">
+                  Notes
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    id="bulkNotes"
+                    type="text"
+                    value={bulkSettings.notes || ''}
+                    onChange={(e) => setBulkSettings({
+                      ...bulkSettings,
+                      notes: e.target.value
+                    })}
+                  />
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => applyBulkSetting('notes', bulkSettings.notes)}
+                  >
+                    Apply to All
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Layout preview - Enhanced to show row length and spacing */}
         <div className="border rounded p-4 bg-gray-50 mt-4">
           <h3 className="font-semibold mb-2">Layout Preview</h3>
           {Array.isArray(layoutStructure) && layoutStructure.length > 0 ? (
-            <ul className="text-xs max-h-40 overflow-auto">
+            <ul className="text-xs max-h-80 overflow-auto">
               {layoutStructure.map((row, i) => (
-                <li key={i} className="mb-1">
-                  Row {row.rowNumber}: {Array.isArray(row.holes) ? row.holes.length : 0} holes, 
-                  {row.length > 0 ? ` ${row.length}m length` : ' No length set'}, 
-                  {row.spacing > 0 ? ` ${row.spacing}m spacing` : ' No spacing set'}
+                <li key={i} className="mb-1 border-b pb-2">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      Row {row.rowNumber}: {Array.isArray(row.holes) ? row.holes.length : 0} holes,
+                      {row.length > 0 ? ` ${row.length}m length` : ' No length set'},
+                      {row.spacing > 0 ? ` ${row.spacing}m spacing` : ' No spacing set'}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setExpandedRows((prev) => ({ ...prev, [row.rowNumber]: !prev[row.rowNumber] }))}
+                    >
+                      {expandedRows[row.rowNumber] ? "Hide Holes" : "View Holes"}
+                    </Button>
+                  </div>
+                  
+                  {expandedRows[row.rowNumber] && (
+                    <>
+                      {/* Row-level bulk actions */}
+                      <div className="mt-2 p-2 bg-gray-100 rounded">
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <span className="text-xs font-medium whitespace-nowrap">Row {row.rowNumber} bulk actions:</span>
+                          
+                          <div className="flex gap-1 items-center">
+                            <span className="text-xs">Target:</span>
+                            <select 
+                              className="text-xs border rounded h-7 px-1"
+                              value=""
+                              title="Set target sucker count for this row"
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  applyBulkSetting('targetSuckerCount', parseInt(e.target.value), row.rowNumber);
+                                  e.target.value = "";
+                                }
+                              }}
+                            >
+                              <option value="">Set...</option>
+                              {[0, 1, 2, 3, 4, 5].map(n => (
+                                <option key={n} value={n}>{n}</option>
+                              ))}
+                            </select>
+                          </div>
+                          
+                          <div className="flex gap-1 items-center">
+                            <span className="text-xs">Current:</span>
+                            <select 
+                              className="text-xs border rounded h-7 px-1"
+                              value=""
+                              title="Set current sucker count for this row"
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  applyBulkSetting('currentSuckerCount', parseInt(e.target.value), row.rowNumber);
+                                  e.target.value = "";
+                                }
+                              }}
+                            >
+                              <option value="">Set...</option>
+                              {[0, 1, 2, 3, 4, 5].map(n => (
+                                <option key={n} value={n}>{n}</option>
+                              ))}
+                            </select>
+                          </div>
+                          
+                          <Button 
+                            type="button" 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-7 px-2 text-xs"
+                            onClick={() => applyBulkSetting('plantedDate', bulkSettings.plantedDate, row.rowNumber)}
+                          >
+                            Set Date
+                          </Button>
+                          
+                          <Button 
+                            type="button" 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-7 px-2 text-xs"
+                            onClick={() => applyBulkSetting('notes', bulkSettings.notes, row.rowNumber)}
+                          >
+                            Set Notes
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Display holes in a grid */}
+                      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {row.holes.map((hole, hIdx) => (
+                          <div key={hIdx} className="border rounded p-2 bg-white flex flex-col gap-1">
+                            <div className="font-medium mb-1">Hole {hole.holeNumber}</div>
+                            <label className="text-xs">Target Sucker Count
+                              <Input
+                                type="number"
+                                min={0}
+                                value={hole.targetSuckerCount ?? 3}
+                                onChange={e => {
+                                  const val = parseInt(e.target.value) || 0;
+                                  const updated = layoutStructure.map(r =>
+                                    r.rowNumber === row.rowNumber ? {
+                                      ...r,
+                                      holes: r.holes.map((h, idx) => idx === hIdx ? { ...h, targetSuckerCount: val } : h)
+                                    } : r
+                                  );
+                                  form.setValue('layoutStructure', updated, { shouldValidate: false });
+                                }}
+                                className="mt-1"
+                              />
+                            </label>
+                            <label className="text-xs">Current Sucker Count
+                              <Input
+                                type="number"
+                                min={0}
+                                value={hole.currentSuckerCount ?? 0}
+                                onChange={e => {
+                                  const val = parseInt(e.target.value) || 0;
+                                  const updated = layoutStructure.map(r =>
+                                    r.rowNumber === row.rowNumber ? {
+                                      ...r,
+                                      holes: r.holes.map((h, idx) => idx === hIdx ? { ...h, currentSuckerCount: val } : h)
+                                    } : r
+                                  );
+                                  form.setValue('layoutStructure', updated, { shouldValidate: false });
+                                }}
+                                className="mt-1"
+                              />
+                            </label>
+                            <label className="text-xs">Planted Date
+                              <Input
+                                type="date"
+                                value={hole.plantedDate ? hole.plantedDate.split('T')[0] : ''}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  const updated = layoutStructure.map(r =>
+                                    r.rowNumber === row.rowNumber ? {
+                                      ...r,
+                                      holes: r.holes.map((h, idx) => idx === hIdx ? { ...h, plantedDate: val } : h)
+                                    } : r
+                                  );
+                                  form.setValue('layoutStructure', updated, { shouldValidate: false });
+                                }}
+                                className="mt-1"
+                              />
+                            </label>
+                            <label className="text-xs">Notes
+                              <Textarea
+                                value={hole.notes ?? ''}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  const updated = layoutStructure.map(r =>
+                                    r.rowNumber === row.rowNumber ? {
+                                      ...r,
+                                      holes: r.holes.map((h, idx) => idx === hIdx ? { ...h, notes: val } : h)
+                                    } : r
+                                  );
+                                  form.setValue('layoutStructure', updated, { shouldValidate: false });
+                                }}
+                                className="mt-1 min-h-[40px]"
+                              />
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
@@ -609,6 +967,7 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
                 <p>Validation Errors: {Object.keys(form.formState.errors).length}</p>
                 <p>Row Length: {rowLength}m, Row Spacing: {rowSpacing}m</p>
                 <p>Date Established: {form.getValues("dateEstablished")?.toISOString()}</p>
+                <p>Bulk Settings: {JSON.stringify(bulkSettings)}</p>
               </div>
             </details>
           </div>

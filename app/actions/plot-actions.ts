@@ -5,11 +5,39 @@ import type { PlotFormValues } from "@/lib/validations/form-schemas"
 import * as plotRepository from "@/db/repositories/plot-repository"
 import { updatePlotLayout } from "@/db/repositories/plot-repository"
 import type { RowData, HoleData } from "@/lib/types/plot"
+import { createGrowthRecord } from "@/db/repositories/growth-records-repository"
 
 export async function addPlot(values: PlotFormValues) {
   try {
     // Create the plot in the database (with fallback to mock data)
     const newPlot = await plotRepository.createPlot(values)
+
+    // After plot creation, create initial growth records for each PLANTED hole
+    if (Array.isArray(values.layoutStructure)) {
+      for (const row of values.layoutStructure) {
+        if (!Array.isArray(row.holes)) continue;
+        for (const hole of row.holes) {
+          if (hole.status === "PLANTED") {
+            try {
+              await createGrowthRecord({
+                farmId: Number(values.farmId),
+                plotId: newPlot.id,
+                rowNumber: row.rowNumber,
+                holeNumber: hole.holeNumber,
+                isMainPlant: true,
+                stage: "Planted",
+                recordDate: hole.plantedDate ? new Date(hole.plantedDate) : new Date(),
+                notes: hole.notes || undefined,
+                metrics: {},
+              })
+            } catch (err) {
+              console.error(`Failed to create growth record for row ${row.rowNumber}, hole ${hole.holeNumber}:`, err)
+              // Continue with other holes
+            }
+          }
+        }
+      }
+    }
 
     // Revalidate the farm page to show the new plot
     revalidatePath(`/farms/${values.farmId}`)
@@ -17,7 +45,7 @@ export async function addPlot(values: PlotFormValues) {
 
     return {
       success: true,
-      message: "Plot added successfully!",
+      message: "Plot added successfully! Initial growth records created for planted holes.",
       plot: newPlot,
     }
   } catch (error) {

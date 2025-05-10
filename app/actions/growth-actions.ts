@@ -2,59 +2,34 @@
 
 import { revalidatePath } from "next/cache"
 import type { GrowthFormValues } from "@/lib/validations/form-schemas"
+import { createGrowthRecord, updateGrowthRecord as repoUpdateGrowthRecord } from "@/db/repositories/growth-records-repository"
 
 export async function recordGrowth(values: GrowthFormValues) {
   try {
-    // In a real app, you would save this data to a database
-    // For now, we'll just simulate a successful save
-    console.log("Recording growth:", values)
-
     // Handle bulk planting if isNewPlanting is true
     if (values.isNewPlanting && values.plantCount && values.plantCount > 1) {
-      console.log(`Adding ${values.plantCount} new plants to plot ${values.plotId}`)
-
-      // In a real app, you would create multiple plant records
-      // For now, we'll just simulate the bulk addition
-      const newPlantingRecords = Array.from({ length: values.plantCount }).map((_, index) => ({
-        id: `plant-${Date.now()}-${index}`,
-        farmId: values.farmId,
-        plotId: values.plotId,
-        plantingDate: values.dateRecorded.toISOString(),
-        healthStatus: values.healthStatus,
-        workerId: values.workerId,
-        varietyName: values.varietyName,
-        plantingSpacing: values.plantingSpacing,
-      }))
-
-      console.log(`Created ${newPlantingRecords.length} new plant records`)
-    } else {
-      // Simulate adding a single growth record
-      const newGrowthRecord = {
-        id: `growth-${Date.now()}`,
-        farmId: values.farmId,
-        plotId: values.plotId,
-        rowId: values.rowId,
-        plantPosition: values.plantPosition,
-        growthStage: values.growthStage,
-        dateRecorded: values.dateRecorded.toISOString(),
-        expectedHarvestDate: values.expectedHarvestDate?.toISOString(),
-        healthStatus: values.healthStatus,
-        notes: values.notes,
-        suckerCount: values.suckerCount,
-        suckerAgeToMaturity: values.suckerAgeToMaturity,
-        suckerHealth: values.suckerHealth,
-        suckerHeight: values.suckerHeight,
-        workerId: values.workerId,
+      // Create multiple plant records
+      for (let i = 0; i < values.plantCount; i++) {
+        await createGrowthRecord({
+          ...values,
+          isMainPlant: true,
+          rowNumber: values.rowId ? Number(values.rowId) : undefined,
+          // Optionally, assign holeNumber if available
+        })
       }
-
-      console.log("Created growth record:", newGrowthRecord)
+    } else {
+      // Add a single growth record
+      await createGrowthRecord({
+        ...values,
+        isMainPlant: values.isNewPlanting ?? false,
+        rowNumber: values.rowId ? Number(values.rowId) : undefined,
+        // Optionally, assign holeNumber if available
+      })
     }
-
     // Revalidate the growth page to show the new record
     revalidatePath("/growth")
     revalidatePath(`/farms/${values.farmId}`)
     revalidatePath("/")
-
     return {
       success: true,
       message: values.isNewPlanting ? "New plants added successfully!" : "Growth stage recorded successfully!",
@@ -70,15 +45,10 @@ export async function recordGrowth(values: GrowthFormValues) {
 
 export async function updateGrowthRecord(recordId: string, values: GrowthFormValues) {
   try {
-    // In a real app, you would update this data in a database
-    // For now, we'll just simulate a successful update
-    console.log("Updating growth record:", { id: recordId, ...values })
-
-    // Revalidate the growth page to show the updated record
+    await repoUpdateGrowthRecord(Number(recordId), values)
     revalidatePath("/growth")
     revalidatePath(`/farms/${values.farmId}`)
     revalidatePath("/")
-
     return {
       success: true,
       message: "Growth record updated successfully!",

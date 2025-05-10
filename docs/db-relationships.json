@@ -1,0 +1,200 @@
+[
+  {
+    "constraint_name": "farms_creator_id_fkey",
+    "source_schema": "public",
+    "source_table": "farms",
+    "source_column": "creator_id",
+    "target_schema": "public",
+    "target_table": "users",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "plots_farm_id_fkey",
+    "source_schema": "public",
+    "source_table": "plots",
+    "source_column": "farm_id",
+    "target_schema": "public",
+    "target_table": "farms",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "tasks_farm_id_fkey",
+    "source_schema": "public",
+    "source_table": "tasks",
+    "source_column": "farm_id",
+    "target_schema": "public",
+    "target_table": "farms",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "tasks_assignee_id_fkey",
+    "source_schema": "public",
+    "source_table": "tasks",
+    "source_column": "assignee_id",
+    "target_schema": "public",
+    "target_table": "users",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "tasks_creator_id_fkey",
+    "source_schema": "public",
+    "source_table": "tasks",
+    "source_column": "creator_id",
+    "target_schema": "public",
+    "target_table": "users",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "task_comments_task_id_fkey",
+    "source_schema": "public",
+    "source_table": "task_comments",
+    "source_column": "task_id",
+    "target_schema": "public",
+    "target_table": "tasks",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "task_comments_user_id_fkey",
+    "source_schema": "public",
+    "source_table": "task_comments",
+    "source_column": "user_id",
+    "target_schema": "public",
+    "target_table": "users",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "growth_records_farm_id_fkey",
+    "source_schema": "public",
+    "source_table": "growth_records",
+    "source_column": "farm_id",
+    "target_schema": "public",
+    "target_table": "farms",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "growth_records_plot_id_fkey",
+    "source_schema": "public",
+    "source_table": "growth_records",
+    "source_column": "plot_id",
+    "target_schema": "public",
+    "target_table": "plots",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "growth_records_creator_id_fkey",
+    "source_schema": "public",
+    "source_table": "growth_records",
+    "source_column": "creator_id",
+    "target_schema": "public",
+    "target_table": "users",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "farm_inspections_farm_id_fkey",
+    "source_schema": "public",
+    "source_table": "farm_inspections",
+    "source_column": "farm_id",
+    "target_schema": "public",
+    "target_table": "farms",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "harvest_records_farm_id_fkey",
+    "source_schema": "public",
+    "source_table": "harvest_records",
+    "source_column": "farm_id",
+    "target_schema": "public",
+    "target_table": "farms",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "knowledge_articles_author_id_fkey",
+    "source_schema": "public",
+    "source_table": "knowledge_articles",
+    "source_column": "author_id",
+    "target_schema": "public",
+    "target_table": "users",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "sales_farm_id_fkey",
+    "source_schema": "public",
+    "source_table": "sales",
+    "source_column": "farm_id",
+    "target_schema": "public",
+    "target_table": "farms",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "expenses_farm_id_fkey",
+    "source_schema": "public",
+    "source_table": "expenses",
+    "source_column": "farm_id",
+    "target_schema": "public",
+    "target_table": "farms",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "expenses_recorded_by_fkey",
+    "source_schema": "public",
+    "source_table": "expenses",
+    "source_column": "recorded_by",
+    "target_schema": "public",
+    "target_table": "users",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "budgets_farm_id_fkey",
+    "source_schema": "public",
+    "source_table": "budgets",
+    "source_column": "farm_id",
+    "target_schema": "public",
+    "target_table": "farms",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "fk_inspector",
+    "source_schema": "public",
+    "source_table": "farm_inspections",
+    "source_column": "inspector",
+    "target_schema": "public",
+    "target_table": "users",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "growth_records_parent_plant_id_fkey",
+    "source_schema": "public",
+    "source_table": "growth_records",
+    "source_column": "parent_plant_id",
+    "target_schema": "public",
+    "target_table": "growth_records",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "harvest_records_user_id_fkey",
+    "source_schema": "public",
+    "source_table": "harvest_records",
+    "source_column": "user_id",
+    "target_schema": "public",
+    "target_table": "users",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "harvest_records_plot_id_fkey",
+    "source_schema": "public",
+    "source_table": "harvest_records",
+    "source_column": "plot_id",
+    "target_schema": "public",
+    "target_table": "plots",
+    "target_column": "id"
+  },
+  {
+    "constraint_name": "fk_tasks_plot",
+    "source_schema": "public",
+    "source_table": "tasks",
+    "source_column": "plot_id",
+    "target_schema": "public",
+    "target_table": "plots",
+    "target_column": "id"
+  }
+]
