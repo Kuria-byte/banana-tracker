@@ -13,7 +13,7 @@ export const primaryNavItems: NavItem[] = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Farms", href: "/farms", icon: Map },
   { name: "Tasks", href: "/tasks", icon: Leaf },
-  { name: "Growth", href: "/growth", icon: Sprout },
+  { name: "Reports", href: "/reports", icon: BarChart3   },
 ]
 
 // Secondary navigation items (hidden under "More" dropdown)
