@@ -273,7 +273,7 @@ export function Header() {
 
           {/* User dropdown - both mobile and desktop */}
           <UserButton
-            showUserInfo={true}
+            showUserInfo={false}
             colorModeToggle={() => {
               console.log("color mode toggle clicked");
             }}

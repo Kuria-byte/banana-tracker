@@ -7,9 +7,9 @@ export interface HoleData {
   activePlantIds?: number[]; // all active plant growth record ids (main + suckers)
   suckerIds?: number[]; // Explicitly track suckers (growth record ids)
   targetSuckerCount?: number; // how many suckers to maintain
-  currentSuckerCount?: number; // current count of active suckers
+  currentSuckerCount?: number; // current count of active suckers (can be updated via growth form)
   plantedDate?: string; // ISO date string
-  plantHealth?: 'Healthy' | 'Diseased' | 'Pest-affected' | 'Damaged';
+  plantHealth?: 'Healthy' | 'Diseased' | 'Pest-affected' | 'Damaged'; // plant health status (can be updated via growth form)
   notes?: string;
 }
 

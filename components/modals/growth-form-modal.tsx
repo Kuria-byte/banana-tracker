@@ -15,20 +15,39 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { GrowthForm } from "@/components/forms/growth-form"
-import { recordEnhancedGrowth } from "@/app/actions/growth-actions"
+import { recordEnhancedGrowth, recordBulkGrowth } from "@/app/actions/growth-actions"
 import type { EnhancedGrowthFormValues } from "@/lib/validations/form-schemas"
 import { useToast } from "@/hooks/use-toast"
 
 interface GrowthFormModalProps {
   trigger?: React.ReactNode
+  initialValues?: Partial<EnhancedGrowthFormValues>
+  mode?: 'individual' | 'bulk'
+  bulkSummary?: { plotName: string, plantCount: number }
+  farms?: any[]
+  plots?: any[]
+  users?: any[]
+  hole?: any
 }
 
-export function GrowthFormModal({ trigger }: GrowthFormModalProps = {}) {
+export function GrowthFormModal({ trigger, initialValues, mode = 'individual', bulkSummary, farms = [], plots = [], users = [], hole }: GrowthFormModalProps = {}) {
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
 
   const handleSubmit = async (values: EnhancedGrowthFormValues) => {
-    const result = await recordEnhancedGrowth(values)
+    let result
+    if (mode === 'bulk') {
+      result = await recordBulkGrowth({
+        farmId: values.farmId!,
+        plotId: values.plotId!,
+        stage: values.stage!,
+        date: values.date!,
+        notes: values.notes,
+        workerId: values.workerId,
+      })
+    } else {
+      result = await recordEnhancedGrowth(values)
+    }
 
     if (result.success) {
       toast({
@@ -54,10 +73,14 @@ export function GrowthFormModal({ trigger }: GrowthFormModalProps = {}) {
           <span className="sr-only">Close</span>
         </DialogClose>
         <DialogHeader>
-          <DialogTitle>Record Growth</DialogTitle>
-          <DialogDescription>Record growth information for your banana plants.</DialogDescription>
+          <DialogTitle>{mode === 'bulk' ? 'Bulk Record Growth' : 'Record Growth'}</DialogTitle>
+          <DialogDescription>
+            {mode === 'bulk'
+              ? `This will record growth for all planted holes in plot "${bulkSummary?.plotName}" (${bulkSummary?.plantCount} plants).`
+              : 'Record growth information for your banana plants.'}
+          </DialogDescription>
         </DialogHeader>
-        <GrowthForm onSubmit={handleSubmit} />
+        <GrowthForm onSubmit={handleSubmit} defaultValues={initialValues} mode={mode} bulkSummary={bulkSummary} farms={farms} plots={plots} users={users} hole={hole} />
         <div className="mt-6 flex justify-end">
           <DialogClose asChild>
             <Button variant="outline" className="mr-2">

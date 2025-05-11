@@ -7,21 +7,26 @@ import { GrowthFormModal } from "@/components/modals/growth-form-modal"
 import { Plus } from "lucide-react"
 import { HealthReportsModal } from "@/components/modals/health-reports-modal"
 import { HarvestPlanModal } from "@/components/modals/harvest-plan-modal"
-import { getUiGrowthStageDistribution, getUiHealthStatusDistribution } from "@/db/repositories/growth-records-repository"
+import { getUiGrowthStageDistribution, getUiHealthStatusDistribution, getGrowthSummaryForFarm } from "@/db/repositories/growth-records-repository"
 import { getUpcomingHarvestYield } from "@/db/repositories/harvest-records-repository"
+import { PlantLifecycle } from "@/components/growth/plant-lifecycle"
 
 export default async function GrowthPage() {
   // Fetch real data from Neon
-  const [stageDist, healthDist, harvestYield] = await Promise.all([
+  const [stageDist, healthDist, harvestYield, growthSummary] = await Promise.all([
     getUiGrowthStageDistribution(),
     getUiHealthStatusDistribution(),
     getUpcomingHarvestYield(),
+    getGrowthSummaryForFarm(53), // TODO: Replace 53 with selected farmId
   ])
 
   // Helper to get % by stage name
   const getStagePercent = (name: string) => stageDist.find(s => s.stage === name)?.percent ?? 0
   // Helper to get % by health status
   const getHealthPercent = (status: string) => healthDist.find(h => h.status === status)?.percent ?? 0
+
+  // Sample up to 6 plants for lifecycle display
+  const plantSamples = (growthSummary?.upcomingHarvests?.details || []).slice(0, 6)
 
   return (
     <div className="container px-4 py-6 md:px-6 md:py-8">
@@ -143,6 +148,29 @@ export default async function GrowthPage() {
                 />
               </CardFooter>
             </Card>
+          </div>
+
+          {/* Plant Lifecycles Section */}
+          <div className="mt-10">
+            <h2 className="text-lg font-semibold mb-4">Plant Lifecycles (Sample)</h2>
+            {plantSamples.length === 0 ? (
+              <div className="text-muted-foreground">No plants ready for harvest or fruit development yet.</div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {plantSamples.map((plant, idx) => (
+                  <div key={idx} className="border rounded-lg p-4 bg-white shadow-sm">
+                    <div className="mb-2 text-sm text-muted-foreground">
+                      Plot: <span className="font-medium">{plant.plotName}</span> | Row: {plant.rowNumber} | Hole: {plant.holeNumber}
+                    </div>
+                    {/* For demo, we use estimatedHarvestDate as plantedDate fallback if not available */}
+                    <PlantLifecycle
+                      plantedDate={plant.plantedDate || new Date(Date.now() - 360 * 24 * 60 * 60 * 1000)}
+                      manualStage={plant.stage}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </TabsContent>
 

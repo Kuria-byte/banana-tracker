@@ -32,6 +32,9 @@ import { TaskFormModal } from "@/components/modals/task-form-modal";
 import { GrowthFormModal } from "@/components/modals/growth-form-modal";
 import { FarmHealthScoringModal } from "@/components/modals/farm-health-scoring-modal";
 import { HarvestFormModal } from "@/components/modals/harvest-form-modal";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
+import PlotGrowthTab from "@/components/growth/PlotGrowthTab";
+
 
 export default async function FarmDetailPage({
   params,
@@ -355,15 +358,7 @@ export default async function FarmDetailPage({
         </TabsContent>
 
         <TabsContent value="growth">
-          <div className="text-center py-12 border rounded-lg">
-            <h2 className="text-xl font-semibold mb-2">Growth Tracking</h2>
-            <p className="text-muted-foreground mb-4">
-              Track the growth stages of your banana plants
-            </p>
-            <GrowthFormModal
-              trigger={<Button>Set Up Growth Tracking</Button>}
-            />
-          </div>
+          <PlotGrowthTab plots={plots} farmId={farmId} farm={farm} farms={[farm]} users={users} />
         </TabsContent>
         <TabsContent value="health">
           <div className="flex justify-between mb-4">

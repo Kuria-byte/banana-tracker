@@ -163,6 +163,9 @@ export const enhancedGrowthSchema = z.object({
   plantCount: z.number().min(1).optional(),
   workerId: z.string().optional(),
   autoFillRows: z.boolean().default(false),
+  // New fields for health and sucker count
+  plantHealth: z.enum(["Healthy", "Diseased", "Pest-affected", "Damaged"]).optional(),
+  currentSuckerCount: z.number().int().min(0).optional(),
 })
 
 export type EnhancedGrowthFormValues = z.infer<typeof enhancedGrowthSchema>
