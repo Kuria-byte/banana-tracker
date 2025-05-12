@@ -45,6 +45,7 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { FarmCard } from "@/components/farms/farm-card"
+import { getFarmsHealthStatusFromPlots, getFarmsWithUnresolvedIssuesFromPlots } from "@/app/actions/farm-health-actions"
 
 function formatDate(dateString: string) {
   if (!dateString) return "N/A";
@@ -68,23 +69,37 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
     healthStatus: ''
   })
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [farmHealth, setFarmHealth] = useState<{ [farmId: string]: string }>({})
+  const [attentionFarms, setAttentionFarms] = useState<string[]>([])
   const [healthStats, setHealthStats] = useState({
     good: 0,
     average: 0,
     poor: 0,
+    notAssessed: 0,
     total: 0
   })
 
-  // Update health stats when farms change
+  // Fetch farm health and attention required on mount
   useEffect(() => {
-    const stats = {
-      good: farms.filter(farm => farm.healthStatus === 'Good').length,
-      average: farms.filter(farm => farm.healthStatus === 'Average').length,
-      poor: farms.filter(farm => farm.healthStatus === 'Poor').length,
-      total: farms.length
+    async function fetchHealthAndIssues() {
+      const healthResults = await getFarmsHealthStatusFromPlots()
+      const healthMap: { [farmId: string]: string } = {}
+      let good = 0, average = 0, poor = 0, notAssessed = 0
+      healthResults.forEach(({ farmId, healthStatus }) => {
+        healthMap[farmId] = healthStatus
+        if (healthStatus === "Good") good++
+        else if (healthStatus === "Average") average++
+        else if (healthStatus === "Poor") poor++
+        else notAssessed++
+      })
+      setFarmHealth(healthMap)
+      setHealthStats({ good, average, poor, notAssessed, total: healthResults.length })
+
+      const unresolved = await getFarmsWithUnresolvedIssuesFromPlots()
+      setAttentionFarms(Object.keys(unresolved))
     }
-    setHealthStats(stats)
-  }, [farms])
+    fetchHealthAndIssues()
+  }, [])
 
   // Apply sorting and filtering
   useEffect(() => {
@@ -103,7 +118,7 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
     }
 
     if (activeFilters.healthStatus && activeFilters.healthStatus !== "all") {
-      result = result.filter((farm) => farm.healthStatus === activeFilters.healthStatus)
+      result = result.filter((farm) => farmHealth[farm.id] === activeFilters.healthStatus)
     }
 
     // Apply sorting
@@ -122,15 +137,15 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
         }
         
         return sortOrder === 'asc'
-          ? healthValue(a.healthStatus) - healthValue(b.healthStatus)
-          : healthValue(b.healthStatus) - healthValue(a.healthStatus)
+          ? healthValue(farmHealth[a.id] || "Not Assessed") - healthValue(farmHealth[b.id] || "Not Assessed")
+          : healthValue(farmHealth[b.id] || "Not Assessed") - healthValue(farmHealth[a.id] || "Not Assessed")
       } else if (sortBy === 'area') {
         return sortOrder === 'asc'
           ? a.area - b.area
           : b.area - a.area
       } else if (sortBy === 'established') {
-        const dateA = new Date(a.establishedDate || 0).getTime()
-        const dateB = new Date(b.establishedDate || 0).getTime()
+        const dateA = new Date(a.createdAt || a.created_at || 0).getTime()
+        const dateB = new Date(b.createdAt || b.created_at || 0).getTime()
         return sortOrder === 'asc'
           ? dateA - dateB
           : dateB - dateA
@@ -140,7 +155,7 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
     })
 
     setFilteredFarms(result)
-  }, [farms, activeFilters, sortBy, sortOrder])
+  }, [farms, activeFilters, sortBy, sortOrder, farmHealth])
 
   const handleFilterChange = (filters: {
     search: string
@@ -234,9 +249,9 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
                     {Math.round((healthStats.good / Math.max(healthStats.total, 1)) * 100)}%
                   </div>
                   <div className="flex gap-1">
-                    <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200">
+                    {/* <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200">
                       Good
-                    </Badge>
+                    </Badge> */}
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mb-4">
@@ -299,7 +314,7 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
                 {healthStats.poor > 0 ? (
                   <div className="mt-4 space-y-3">
                     {farms
-                      .filter(farm => farm.healthStatus === 'Poor')
+                      .filter(farm => attentionFarms.includes(farm.id))
                       .slice(0, 3)
                       .map(farm => (
                         <div key={farm.id} className="flex items-center justify-between gap-2 p-2 border rounded-md">
@@ -329,7 +344,7 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
           </div>
           
           <div className="mb-6">
-            <FarmHealthDashboard farms={farms} />
+            {/* <FarmHealthDashboard farms={farms} /> */}
           </div>
         </TabsContent>
         
@@ -539,14 +554,17 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
               ) : viewMode === 'grid' ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {filteredFarms.map((farm) => {
-                    const establishedDate = formatDate(farm.establishedDate);
-                    const holes = farm.holes;
+                    const establishedDate = formatDate(farm.createdAt || farm.created_at);
+                    const holes = farm.numberOfHoles;
+                    const numberOfPlots = farm.numberOfPlots;
                     return (
                       <FarmCard 
                         key={farm.id} 
                         farm={farm} 
-                        establishedDate={establishedDate} 
+                        // establishedDate={establishedDate} 
                         holes={holes} 
+                        numberOfPlots={numberOfPlots}
+                        healthStatus={farmHealth[farm.id] || "Not Assessed"}
                       />
                     )
                   })}
@@ -554,15 +572,18 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
               ) : viewMode === 'list' ? (
                 <div className="space-y-2">
                   {filteredFarms.map((farm) => {
-                    const establishedDate = formatDate(farm.establishedDate);
-                    const holes = farm.holes;
+                    const establishedDate = formatDate(farm.createdAt || farm.created_at);
+                    const holes = farm.numberOfHoles;
+                    const numberOfPlots = farm.numberOfPlots;
                     return (
                       <FarmCard 
                         key={farm.id} 
                         farm={farm} 
                         establishedDate={establishedDate} 
                         holes={holes}
+                        numberOfPlots={numberOfPlots}
                         isCompact={true}
+                        healthStatus={farmHealth[farm.id] || "Not Assessed"}
                       />
                     )
                   })}

@@ -343,36 +343,36 @@ export function FarmHealthScoringForm({ farmId, parameters, plots, onSuccess }: 
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
+        <div className="grid gap-6 md:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
                       <FormLabel className="text-base font-medium">Assessment Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button variant="outline" className="w-full pl-3 text-left font-normal">
-                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date > new Date()}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button variant="outline" className="w-full pl-3 text-left font-normal">
+                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date > new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
                 <div>
                   <FormLabel className="text-base font-medium">Current Health Status</FormLabel>
@@ -389,13 +389,13 @@ export function FarmHealthScoringForm({ farmId, parameters, plots, onSuccess }: 
                       <span className={cn("font-bold", getHealthStatusColor())}>{scorePercentage}%</span>
                     </div>
                     <CardContent className="p-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Current Score</p>
-                          <p className="text-2xl font-bold">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Current Score</p>
+                    <p className="text-2xl font-bold">
                             {currentScore} <span className="text-sm text-muted-foreground font-normal">/ {maxPossibleScore}</span>
-                          </p>
-                        </div>
+                    </p>
+                  </div>
                         <div className="relative h-16 w-16">
                           <div className="absolute inset-0 flex items-center justify-center">
                             <div className={cn("h-14 w-14 rounded-full border-4", 
@@ -408,12 +408,12 @@ export function FarmHealthScoringForm({ farmId, parameters, plots, onSuccess }: 
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  </div>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
             </div>
           </CardContent>
         </Card>
@@ -432,27 +432,27 @@ export function FarmHealthScoringForm({ farmId, parameters, plots, onSuccess }: 
           <CardContent>
             <div className="space-y-6">
               <TooltipProvider>
-                {parameters.map((parameter, index) => (
-                  <FormField
-                    key={parameter.id}
-                    control={form.control}
-                    name={`parameters.${index}.score`}
-                    render={({ field }) => (
-                      <FormItem>
+          {parameters.map((parameter, index) => (
+            <FormField
+              key={parameter.id}
+              control={form.control}
+              name={`parameters.${index}.score`}
+              render={({ field }) => (
+                <FormItem>
                         <div className="space-y-2">
                           <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                               <FormLabel className="text-base font-medium">{parameter.name}</FormLabel>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
                                   <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="max-w-xs">{parameter.description}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
-                            <div className="flex items-center gap-2">
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs">{parameter.description}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                    </div>
+                    <div className="flex items-center gap-2">
                               <Badge variant="outline" className="font-normal">
                                 {field.value} / {parameter.maxPoints}
                               </Badge>
@@ -473,24 +473,24 @@ export function FarmHealthScoringForm({ farmId, parameters, plots, onSuccess }: 
                               </FormControl>
                             </div>
                             <div className="col-span-2">
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={parameter.maxPoints}
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={parameter.maxPoints}
                                   className="w-full text-center"
-                                  {...field}
-                                  onChange={(e) => field.onChange(Number.parseInt(e.target.value) || 0)}
-                                />
-                              </FormControl>
+                          {...field}
+                          onChange={(e) => field.onChange(Number.parseInt(e.target.value) || 0)}
+                        />
+                      </FormControl>
                             </div>
-                          </div>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ))}
+                    </div>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ))}
               </TooltipProvider>
             </div>
           </CardContent>
@@ -645,7 +645,7 @@ export function FarmHealthScoringForm({ farmId, parameters, plots, onSuccess }: 
                   <Plus className="h-4 w-4 mr-2" />
                   Add Issue
                 </Button>
-              </div>
+        </div>
 
               {issues.length > 0 && (
                 <div className="space-y-2">
@@ -706,25 +706,25 @@ export function FarmHealthScoringForm({ farmId, parameters, plots, onSuccess }: 
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Add any additional notes about this assessment..."
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <Textarea
+                  placeholder="Add any additional notes about this assessment..."
                       className="min-h-[120px] resize-none"
-                      {...field}
-                    />
-                  </FormControl>
+                  {...field}
+                />
+              </FormControl>
                   <FormDescription>
                     Include any observations or issues that need attention but weren't covered by the parameters above.
                   </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
           </CardContent>
         </Card>
 

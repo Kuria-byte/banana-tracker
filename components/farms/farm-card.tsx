@@ -17,18 +17,22 @@ import {
   Activity
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useMemo } from "react"
 
 interface FarmCardProps {
   farm: any
-  establishedDate: string
   holes: number
+  numberOfPlots?: number
   isCompact?: boolean
+  healthStatus?: string
 }
 
-export function FarmCard({ farm, establishedDate, holes, isCompact = false }: FarmCardProps) {
+export function FarmCard({ farm, holes, numberOfPlots, isCompact = false, healthStatus }: FarmCardProps) {
+  // Use the prop if provided, else fallback to farm.healthStatus
+  const displayHealthStatus = healthStatus || farm.healthStatus
   // Helper functions
   const getHealthStatusColor = () => {
-    switch (farm.healthStatus) {
+    switch (displayHealthStatus) {
       case "Good":
         return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800"
       case "Average":
@@ -41,7 +45,7 @@ export function FarmCard({ farm, establishedDate, holes, isCompact = false }: Fa
   }
 
   const getHealthBorderColor = () => {
-    switch (farm.healthStatus) {
+    switch (displayHealthStatus) {
       case "Good":
         return "border-l-green-500 dark:border-l-green-600"
       case "Average":
@@ -54,7 +58,7 @@ export function FarmCard({ farm, establishedDate, holes, isCompact = false }: Fa
   }
 
   const getHealthIcon = () => {
-    switch (farm.healthStatus) {
+    switch (displayHealthStatus) {
       case "Good":
         return <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" />
       case "Average":
@@ -66,11 +70,25 @@ export function FarmCard({ farm, establishedDate, holes, isCompact = false }: Fa
     }
   }
 
+  // Compute established date: use farm.createdAt only
+  const formattedEstablishedDate = useMemo(() => {
+    const dateStr = farm.createdAt;
+    if (!dateStr) return "N/A";
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "N/A";
+    return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }, [farm.createdAt]);
+
   // Determine if this is a small farm
   const isSmallFarm = farm.area < 2.0
 
   // Determine if this is a newly established farm (less than 6 months)
-  const isNewFarm = new Date(farm.establishedDate) > new Date(Date.now() - 180 * 24 * 60 * 60 * 1000)
+  const isNewFarm = (() => {
+    const dateStr = farm.createdAt;
+    if (!dateStr) return false;
+    const date = new Date(dateStr);
+    return date > new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+  })();
 
   return (
     <Card className={cn(
@@ -99,11 +117,11 @@ export function FarmCard({ farm, establishedDate, holes, isCompact = false }: Fa
               <TooltipTrigger asChild>
                 <Badge variant="outline" className={cn("font-normal flex items-center gap-1", getHealthStatusColor())}>
                   {getHealthIcon()}
-                  {farm.healthStatus}
+                  {displayHealthStatus}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Farm health: {farm.healthStatus}</p>
+                <p>Farm health: {displayHealthStatus}</p>
                 <p className="text-xs">Based on recent assessments</p>
               </TooltipContent>
             </Tooltip>
@@ -125,7 +143,7 @@ export function FarmCard({ farm, establishedDate, holes, isCompact = false }: Fa
             <div>
               <p className="text-muted-foreground text-xs">Plots</p>
               <p className="font-medium flex items-center">
-                {farm.plots || '0'}
+                {typeof numberOfPlots === 'number' ? numberOfPlots : (farm.plotCount || 0)}
                 {isSmallFarm && (
                   <span className="ml-1 text-xs text-muted-foreground">(Small)</span>
                 )}
@@ -142,13 +160,13 @@ export function FarmCard({ farm, establishedDate, holes, isCompact = false }: Fa
                   <p className="font-medium">{holes}</p>
                 </div>
               </div>
-              <div className="flex items-center">
+              {/* <div className="flex items-center">
                 <CalendarClock className="mr-2 h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-muted-foreground text-xs">Established</p>
-                  <p className="font-medium">{establishedDate}</p>
+                  <p className="font-medium">{formattedEstablishedDate}</p>
                 </div>
-              </div>
+              </div> */}
             </>
           )}
         </div>
@@ -158,11 +176,11 @@ export function FarmCard({ farm, establishedDate, holes, isCompact = false }: Fa
             <div 
               className={cn(
                 "h-full rounded-full",
-                farm.healthStatus === "Good" ? "bg-green-500 dark:bg-green-600" :
-                farm.healthStatus === "Average" ? "bg-yellow-500 dark:bg-yellow-600" :
+                displayHealthStatus === "Good" ? "bg-green-500 dark:bg-green-600" :
+                displayHealthStatus === "Average" ? "bg-yellow-500 dark:bg-yellow-600" :
                 "bg-red-500 dark:bg-red-600"
               )} 
-              style={{ width: farm.healthStatus === "Good" ? "85%" : farm.healthStatus === "Average" ? "50%" : "25%" }}
+              style={{ width: displayHealthStatus === "Good" ? "85%" : displayHealthStatus === "Average" ? "50%" : displayHealthStatus === "Poor" ? "25%" : "10%" }}
             ></div>
           </div>
         )}
@@ -184,13 +202,13 @@ export function FarmCard({ farm, establishedDate, holes, isCompact = false }: Fa
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon">
+                  {/* <Button variant="outline" size="icon">
                     <BarChart3 className="h-4 w-4" />
-                  </Button>
+                  </Button> */}
                 </TooltipTrigger>
-                <TooltipContent>
+                {/* <TooltipContent>
                   <p>View Health Charts</p>
-                </TooltipContent>
+                </TooltipContent> */}
               </Tooltip>
             </TooltipProvider>
           )}
@@ -199,13 +217,13 @@ export function FarmCard({ farm, establishedDate, holes, isCompact = false }: Fa
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon">
+                  {/* <Button variant="outline" size="icon">
                     <Edit className="h-4 w-4" />
-                  </Button>
+                  </Button> */}
                 </TooltipTrigger>
-                <TooltipContent>
+                {/* <TooltipContent>
                   <p>Edit Farm</p>
-                </TooltipContent>
+                </TooltipContent> */}
               </Tooltip>
             </TooltipProvider>
           )}

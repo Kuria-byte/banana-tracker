@@ -14,8 +14,8 @@ import {
   calculateMaxPossibleScore,
 } from "@/lib/mock-data/farm-health-scoring"
 import { db } from "@/db/client"
-import { farmInspections, inspectionMetrics, inspectionIssues } from "@/db/schema"
-import { eq, and, gte, lte, inArray } from "drizzle-orm"
+import { farmInspections, inspectionMetrics, inspectionIssues, plots, farms } from "@/db/schema"
+import { eq, and, gte, lte, inArray, desc, or } from "drizzle-orm"
 
 // Get all scoring parameters (metric definitions)
 export async function getScoringParameters() {
@@ -305,5 +305,84 @@ export async function calculateMonthlyHealthSummary(farmId: string, year: number
   } catch (error) {
     console.error("Error calculating monthly health summary:", error)
     return { success: false, error: "Failed to calculate monthly health summary" }
+  }
+}
+
+// Get farm-level health status based on plot-level inspections
+export async function getFarmsHealthStatusFromPlots() {
+  // 1. Get all farms
+  const allFarms = await db.select().from(farms)
+  const results = []
+  for (const farm of allFarms) {
+    // 2. Get all plots for this farm
+    const farmPlots = await db.select().from(plots).where(eq(plots.farmId, farm.id))
+    let plotStatuses: string[] = []
+    for (const plot of farmPlots) {
+      // 3. Get latest inspection for this plot
+      const [latestInspection] = await db.select().from(farmInspections)
+        .where(eq(farmInspections.plotId, plot.id))
+        .orderBy(desc(farmInspections.inspectionDate))
+        .limit(1)
+      if (latestInspection) {
+        // Use your determineHealthStatus function
+        const score = latestInspection.score
+        plotStatuses.push(determineHealthStatus(score))
+      }
+    }
+    // 4. Aggregate plot statuses to farm status
+    let farmStatus = "Not Assessed"
+    if (plotStatuses.length > 0) {
+      if (plotStatuses.includes("Poor")) farmStatus = "Poor"
+      else if (plotStatuses.includes("Average")) farmStatus = "Average"
+      else if (plotStatuses.includes("Good")) farmStatus = "Good"
+    }
+    results.push({
+      farmId: farm.id,
+      farmName: farm.name,
+      healthStatus: farmStatus,
+      plotStatuses,
+    })
+  }
+  return results
+}
+
+// Get farms with unresolved issues (from any plot)
+export async function getFarmsWithUnresolvedIssuesFromPlots() {
+  // Get all unresolved issues
+  const issues = await db.select().from(inspectionIssues).where(
+    or(
+      eq(inspectionIssues.status, "Open"),
+      eq(inspectionIssues.status, "In Progress")
+    )
+  )
+  // Group by farmId (via inspection -> plot -> farm)
+  const farmIssues: Record<number, any[]> = {}
+  for (const issue of issues) {
+    // Get the inspection and plot to find the farmId
+    const [inspection] = await db.select().from(farmInspections).where(eq(farmInspections.id, issue.inspectionId))
+    if (inspection) {
+      const [plot] = await db.select().from(plots).where(eq(plots.id, inspection.plotId))
+      if (plot) {
+        if (!farmIssues[plot.farmId]) farmIssues[plot.farmId] = []
+        farmIssues[plot.farmId].push({ ...issue, inspection, plot })
+      }
+    }
+  }
+  return farmIssues
+}
+
+// Get all issues for a farm by farmId
+export async function getInspectionIssuesByFarmId(farmId: string) {
+  try {
+    // Get all inspections for the farm
+    const inspections = await db.select().from(farmInspections).where(eq(farmInspections.farmId, Number(farmId)))
+    const inspectionIds = inspections.map(i => i.id)
+    if (inspectionIds.length === 0) return { success: true, data: [] }
+    // Get all issues for these inspections
+    const issues = await db.select().from(inspectionIssues).where(inArray(inspectionIssues.inspectionId, inspectionIds))
+    return { success: true, data: issues }
+  } catch (error) {
+    console.error("Error fetching inspection issues by farmId:", error)
+    return { success: false, error: "Failed to fetch inspection issues by farmId" }
   }
 }
