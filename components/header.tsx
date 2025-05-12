@@ -42,14 +42,7 @@ const navItems = [
   { name: "Assistant", href: "/assistant" },
   { name: "Reports", href: "/reports" },
 ]
-
-// Current user info - in a real app, this would come from authentication
-const currentUser = {
-  name: "Joy",
-  role: "Farm Manager",
-  initials: "J",
-}
-
+  
 export function Header() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
