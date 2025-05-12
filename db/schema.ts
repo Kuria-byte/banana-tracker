@@ -291,10 +291,23 @@ export const buyers = pgTable("buyers", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Add NextAuth tables (Account, Session, VerificationToken) as needed, following your auth provider's requirements.
+// Assistant Conversations
+export const assistantConversations = pgTable("assistant_conversations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const assistantMessages = pgTable("assistant_messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").references(() => assistantConversations.id).notNull(),
+  role: varchar("role", { length: 20 }).notNull(), // 'user' or 'assistant'
+  content: text("content").notNull(),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  metadata: json("metadata"), // For storing intent, entities, etc.
+});
+
 // Define relationships
-
-
 
 export const plotsRelations = relations(plots, ({ one, many }) => ({
   farm: one(farms, {

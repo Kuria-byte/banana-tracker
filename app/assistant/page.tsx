@@ -1,219 +1,95 @@
-// // File: /app/assistant/page.tsx
-// import { Suspense } from "react";
-// import { Skeleton } from "@/components/ui/skeleton";
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-// import { AlertCircle, HelpCircle, InfoIcon, MessageSquare } from "lucide-react";
-// import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+// app/assistant/page.tsx
+import { Suspense } from 'react';
+import { Metadata } from 'next';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getUserConversation } from '@/app/actions/ai-assistant-actions';
+import { stackServerApp } from "@/stack";
+import { getUserByEmail } from '@/app/actions/team-actions';
+import { Badge } from "@/components/ui/badge";
+import AssistantChat from '@/components/assistant/assistant-chat';
+import AssistantHelp from '@/components/assistant/assistant-help';
+import ChatSkeleton from '@/components/assistant/chat-skeleton';
 
-// // 
-// // Import client components (note we're importing directly)
-// import SimpleFarmAssistant from "@/components/ai/SimpleFarmAssistant";
-// import SuggestedQueries from "@/components/ai/SuggestedQueries";
+export const metadata: Metadata = {
+  title: 'Farm Assistant | Banana Tracker',
+  description: 'AI-powered assistant for managing your banana farms'
+};
 
-// export default function AssistantPage() {
-//   return (
-//     <div className="container max-w-6xl mx-auto py-8 px-4 space-y-8">
-//       <div className="flex items-center justify-between mb-6">
-//         <div>
-//           <h1 className="text-3xl font-bold mb-2">Farm Assistant</h1>
-//           <p className="text-muted-foreground text-lg">Get instant answers about your farm operations</p>
-//         </div>
-//       </div>
-      
-//       <Tabs defaultValue="chat" className="space-y-8">
-//         <TabsList className="grid w-full max-w-md grid-cols-2">
-//           <TabsTrigger value="chat" className="flex items-center gap-2 py-3">
-//             <MessageSquare className="h-4 w-4" />
-//             Chat
-//           </TabsTrigger>
-//           <TabsTrigger value="help" className="flex items-center gap-2 py-3">
-//             <HelpCircle className="h-4 w-4" />
-//             Help & Tips
-//           </TabsTrigger>
-//         </TabsList>
+export default async function AssistantPage() {
+  // Get the authenticated user from Stack Auth
+  const user = await stackServerApp.getUser();
+  const userEmail = typeof user?.primaryEmail === 'string' ? user.primaryEmail : undefined;
+
+  let userId = 0;
+  let initialMessages: any[] = [];
+
+  if (userEmail) {
+    const dbUser = await getUserByEmail(userEmail);
+    userId = typeof dbUser?.id === 'number' ? dbUser.id : Number(dbUser?.id) || 0;
+    if (userId) {
+      try {
+        initialMessages = await getUserConversation(userId);
+      } catch (e) {
+        initialMessages = [];
+      }
+    }
+  }
+
+  // Graceful fallback for new users or missing conversation
+  if (!Array.isArray(initialMessages)) {
+    initialMessages = [];
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-6 max-w-5xl">
+      <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+        <div className="flex flex-col items-center md:items-start">
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-bold">Farm Assistant</h1>
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 animate-pulse">
+              Beta
+            </Badge>
+          </div>
+          <p className="text-gray-600 md:max-w-xl text-center md:text-left">
+            Your AI-powered farming companion. Get answers about your farms, tasks, and harvests.
+          </p>
+        </div>
         
-//         <TabsContent value="chat" className="space-y-8">
-//           <Suspense fallback={<AssistantSkeleton />}>
-//             <AssistantContainer />
-//           </Suspense>
-//         </TabsContent>
+        <div className="hidden md:flex items-center gap-2">
+          <div className="bg-green-50 text-green-700 text-sm rounded-full px-3 py-1 border border-green-100">
+            Powered by Google Gemini
+          </div>
+        </div>
+      </div>
+      
+      <Tabs defaultValue="chat" className="w-full">
+        <TabsList className="w-full max-w-md mx-auto mb-6 grid grid-cols-2">
+          <TabsTrigger value="chat" className="rounded-l-full data-[state=active]:bg-green-600 data-[state=active]:text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            Chat
+          </TabsTrigger>
+          <TabsTrigger value="help" className="rounded-r-full data-[state=active]:bg-green-600 data-[state=active]:text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            Resources
+          </TabsTrigger>
+        </TabsList>
         
-//         <TabsContent value="help" className="space-y-8">
-//           <HelpContent />
-//         </TabsContent>
-//       </Tabs>
-//     </div>
-//   );
-// }
-
-// // Server component to get the user ID
-// function AssistantContainer() {
-//   return (
-//     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-//       <div className="md:col-span-2">
-//         <SimpleFarmAssistant />
-//       </div>
-//       <div className="hidden md:block">
-//         <SuggestedQueriesContainer />
-//       </div>
-//     </div>
-//   );
-// }
-
-// function SuggestedQueriesContainer() {
-//   return (
-//     <div className="sticky top-8">
-//       <SuggestedQueries onSelect={(query) => {
-//         // This will be handled by client-side JavaScript
-//         const event = new CustomEvent('suggestionSelected', { detail: { query } });
-//         window.dispatchEvent(event);
-//       }} />
-//     </div>
-//   );
-// }
-
-// // Loading skeleton
-// function AssistantSkeleton() {
-//   return (
-//     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-//       <div className="md:col-span-2">
-//         <div className="w-full h-[600px] rounded-lg border shadow-sm bg-card p-8">
-//           <div className="space-y-2 mb-6">
-//             <Skeleton className="h-8 w-48" />
-//           </div>
-//           <div className="space-y-6 my-6">
-//             <Skeleton className="h-16 w-3/4" />
-//             <Skeleton className="h-16 w-3/4 ml-auto" />
-//             <Skeleton className="h-16 w-3/4" />
-//           </div>
-//           <div className="mt-auto pt-6">
-//             <Skeleton className="h-12 w-full" />
-//           </div>
-//         </div>
-//       </div>
-//       <div className="hidden md:block">
-//         <Skeleton className="h-[400px] w-full rounded-lg" />
-//       </div>
-//     </div>
-//   );
-// }
-
-// // Help content component 
-// function HelpContent() {
-//   const questionTypes = [
-//     {
-//       title: "Harvest Information",
-//       description: "Ask about upcoming harvests, past yields, and harvest schedules",
-//       examples: [
-//         "When is my next harvest due?",
-//         "When will plot 28 be ready for harvest?",
-//         "Which plots are ready for harvesting?",
-//       ]
-//     },
-//     {
-//       title: "Task Management",
-//       description: "Inquire about pending tasks, deadlines, and assignments",
-//       examples: [
-//         "What tasks are due in Kirinyaga?",
-//         "Show my pending tasks for this week",
-//         "Which high-priority tasks need attention?",
-//       ]
-//     },
-//     {
-//       title: "Plot and Farm Status",
-//       description: "Get information about the condition and health of your plots",
-//       examples: [
-//         "What is the status of plot 28?",
-//         "How healthy are the plants in Eastlands Farm?",
-//         "Which plots need more attention?",
-//       ]
-//     },
-//     {
-//       title: "Forecasts and Projections",
-//       description: "Get forecasts for harvests, revenue, and weather",
-//       examples: [
-//         "What is the forecast for the next 3 months?",
-//         "What's our projected yield for the next quarter?",
-//         "When should I schedule the next irrigation?",
-//       ]
-//     },
-//   ];
-
-//   return (
-//     <div className="space-y-8">
-//       <Alert variant="default" className="p-6">
-//         <AlertCircle className="h-5 w-5" />
-//         <AlertTitle className="text-lg">About the Farm Assistant</AlertTitle>
-//         <AlertDescription className="mt-2 text-base">
-//           The Farm Assistant uses AI to help you manage your banana farm by answering questions about your farm data. 
-//           It processes your questions directly in your browser without sending data to external services.
-//         </AlertDescription>
-//       </Alert>
+        <TabsContent value="chat" className="focus-visible:outline-none focus-visible:ring-0">
+          <div className="bg-gradient-to-br from-white to-green-50 rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <Suspense fallback={<ChatSkeleton />}>
+              <AssistantChat initialMessages={initialMessages} userId={userId} />
+            </Suspense>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="help" className="focus-visible:outline-none focus-visible:ring-0">
+          <AssistantHelp />
+        </TabsContent>
+      </Tabs>
       
-//       <Card className="shadow-sm">
-//         <CardHeader className="pb-3">
-//           <CardTitle className="text-xl">What You Can Ask</CardTitle>
-//           <CardDescription className="text-base">
-//             The assistant can answer a variety of questions about your farm operations
-//           </CardDescription>
-//         </CardHeader>
-//         <CardContent>
-//           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-//             {questionTypes.map((type) => (
-//               <div key={type.title} className="space-y-4">
-//                 <h3 className="font-semibold text-lg flex items-center gap-2">
-//                   <InfoIcon className="h-5 w-5 text-primary" />
-//                   {type.title}
-//                 </h3>
-//                 <p className="text-muted-foreground">{type.description}</p>
-//                 <div className="space-y-2">
-//                   {type.examples.map((example) => (
-//                     <div key={example} className="text-sm bg-muted p-3 rounded-md">
-//                       "{example}"
-//                     </div>
-//                   ))}
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         </CardContent>
-//       </Card>
-      
-//       <Card className="shadow-sm">
-//         <CardHeader className="pb-3">
-//           <CardTitle className="text-xl">Technical Details</CardTitle>
-//           <CardDescription className="text-base">
-//             How the Farm Assistant works behind the scenes
-//           </CardDescription>
-//         </CardHeader>
-//         <CardContent className="space-y-6">
-//           <div>
-//             <h3 className="font-semibold text-lg mb-3">Rule-Based Processing</h3>
-//             <p className="text-muted-foreground">
-//               The Farm Assistant uses a pattern matching system to understand your questions and extract relevant information
-//               such as farm IDs, plot IDs, locations, and time periods. This approach ensures fast and reliable responses
-//               without the complexity of large AI models.
-//             </p>
-//           </div>
-          
-//           <div>
-//             <h3 className="font-semibold text-lg mb-3">Data Retrieval</h3>
-//             <p className="text-muted-foreground">
-//               Once your question is understood, the assistant retrieves the relevant data from your farm database,
-//               including information about farms, plots, tasks, harvests, growth records, and health metrics.
-//             </p>
-//           </div>
-          
-//           <div>
-//             <h3 className="font-semibold text-lg mb-3">Response Generation</h3>
-//             <p className="text-muted-foreground">
-//               The assistant formats the retrieved data into a natural language response that directly answers your question.
-//               For complex questions, it can combine multiple data points to provide a comprehensive answer.
-//             </p>
-//           </div>
-//         </CardContent>
-//       </Card>
-//     </div>
-//   );
-// }
+      <div className="mt-6 text-center text-sm text-gray-500">
+        <p>Have feedback? <a href="#" className="text-green-600 hover:underline">Let us know</a> how we can improve the assistant.</p>
+      </div>
+    </div>
+  );
+}

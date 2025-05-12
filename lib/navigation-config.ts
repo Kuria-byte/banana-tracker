@@ -1,4 +1,4 @@
-import { BarChart3, Home, Leaf, Settings, Users, BookOpen, Map, ShoppingCart, Sprout } from "lucide-react"
+import { BarChart3, Home, Leaf, Settings, Users, BookOpen, Map, ShoppingCart, Sprout, Zap } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 export type NavItem = {
@@ -14,6 +14,7 @@ export const primaryNavItems: NavItem[] = [
   { name: "Farms", href: "/farms", icon: Map },
   { name: "Tasks", href: "/tasks", icon: Leaf },
   { name: "Reports", href: "/reports", icon: BarChart3   },
+  { name: "Assistant", href: "/assistant", icon: Zap },
 ]
 
 // Secondary navigation items (hidden under "More" dropdown)

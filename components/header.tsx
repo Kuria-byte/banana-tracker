@@ -39,7 +39,7 @@ const navItems = [
   { name: "Dashboard", href: "/" },
   { name: "Farms", href: "/farms" },
   { name: "Tasks", href: "/tasks" },
-  { name: "Growth", href: "/growth" },
+  { name: "Assistant", href: "/assistant" },
   { name: "Reports", href: "/reports" },
 ]
 

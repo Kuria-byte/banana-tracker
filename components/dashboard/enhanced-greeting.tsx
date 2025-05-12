@@ -27,6 +27,7 @@ import Link from "next/link"
 import { FarmSelectionModal } from "@/components/modals/farm-selection-modal"
 import { fetchWeather, getWeatherIconName } from "@/lib/services/weather"
 import type { WeatherData } from "@/lib/services/weather"
+import { FarmHealthScoringModal } from "../modals/farm-health-scoring-modal"
 
 export function EnhancedGreeting({ farms, tasks }: { farms: any[]; tasks: any[] }) {
   const user = useUser()
@@ -37,6 +38,7 @@ export function EnhancedGreeting({ farms, tasks }: { farms: any[]; tasks: any[] 
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [isLoadingWeather, setIsLoadingWeather] = useState(true)
   const [weatherError, setWeatherError] = useState<string | null>(null)
+  const [selectedFarmId, setSelectedFarmId] = useState(farms[0]?.id || "")
 
   useEffect(() => {
     const updateGreeting = () => {
@@ -207,12 +209,15 @@ export function EnhancedGreeting({ farms, tasks }: { farms: any[]; tasks: any[] 
                   Assign Task
                 </Link>
               </Button>
-              <FarmSelectionModal>
-                <Button variant="outline" size="sm" className="h-8">
-                  <LineChart className="mr-2 h-3.5 w-3.5" />
-                  Score Farm
-                </Button>
-              </FarmSelectionModal>
+              <FarmHealthScoringModal
+                trigger={
+                  <Button variant="outline" size="sm" className="h-8">
+                    <LineChart className="mr-2 h-3.5 w-3.5" />
+                    Score Farm
+                  </Button>
+                }
+                farmId={farms[0]?.id || ""}
+              />
             </div>
           </div>
 

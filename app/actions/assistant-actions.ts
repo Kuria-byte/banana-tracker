@@ -11,6 +11,7 @@ import {
 } from "@/db/schema";
 import { and, eq, gte, like, lte, desc, or, inArray, sql, count, sum, avg } from "drizzle-orm";
 import { EntityMap, Intent, AssistantResponse } from "@/lib/types/intent";
+import { geminiModel } from '@/lib/ai/gemini-client';
 
 /**
  * Query the database based on the identified intent and entities
@@ -1142,4 +1143,26 @@ async function getTaskSummary(userId: number) {
     console.error("Error getting task summary:", error);
     return { message: "Error retrieving task information" };
   }
+}
+
+export async function enhancedFormatResponse(
+  intent: any,
+  data: any,
+  originalQuestion: string
+): Promise<string> {
+  // Get base response from existing function
+  const baseResponse = await formatAssistantResponse(intent, data, originalQuestion);
+  return enhanceResponseWithGemini(baseResponse, originalQuestion);
+}
+
+async function enhanceResponseWithGemini(baseResponse: string, originalQuestion: string): Promise<string> {
+  const prompt = `
+    Original question: ${originalQuestion}
+    Base response: ${baseResponse}
+    Please enhance this response to be more conversational and helpful. 
+    Keep all the factual information intact, but make it more engaging.
+    Format the response with proper Markdown for better readability.
+  `;
+  const result = await geminiModel.generateContent(prompt);
+  return result.response.text();
 }
