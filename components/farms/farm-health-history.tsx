@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import type { ScoringRecord } from "@/lib/types/farm-health"
-import { getScoringRecordsByFarmId } from "@/app/actions/farm-health-actions"
+import { getScoringRecordsByFarmId, getInspectionIssuesByInspectionId } from "@/app/actions/farm-health-actions"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 interface FarmHealthHistoryProps {
   farmId: string
@@ -18,6 +19,8 @@ export function FarmHealthHistory({ farmId }: FarmHealthHistoryProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [timeframe, setTimeframe] = useState("all")
+  const [issuesByRecord, setIssuesByRecord] = useState<Record<string, any[]>>({})
+  const [openDialogId, setOpenDialogId] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadRecords() {
@@ -47,6 +50,17 @@ export function FarmHealthHistory({ farmId }: FarmHealthHistoryProps) {
           filteredRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
           setRecords(filteredRecords)
+          // Fetch issues for each record
+          const issuesMap: Record<string, any[]> = {}
+          await Promise.all(filteredRecords.map(async (record: any) => {
+            const res = await getInspectionIssuesByInspectionId(record.id)
+            if (res.success && res.data) {
+              issuesMap[record.id] = res.data
+            } else {
+              issuesMap[record.id] = []
+            }
+          }))
+          setIssuesByRecord(issuesMap)
         } else {
           setError(result.error || "Failed to load health records")
         }
@@ -117,6 +131,7 @@ export function FarmHealthHistory({ farmId }: FarmHealthHistoryProps) {
                   <TableHead>Score</TableHead>
                   <TableHead>Health Status</TableHead>
                   <TableHead>Notes</TableHead>
+                  <TableHead>Issues</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -133,6 +148,36 @@ export function FarmHealthHistory({ farmId }: FarmHealthHistoryProps) {
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-xs truncate">{record.notes || "No notes"}</TableCell>
+                    <TableCell>
+                      {issuesByRecord[record.id] && issuesByRecord[record.id].length > 0 ? (
+                        <Dialog open={openDialogId === record.id} onOpenChange={open => setOpenDialogId(open ? record.id : null)}>
+                          <DialogTrigger asChild>
+                            <Badge variant="destructive" className="cursor-pointer">{issuesByRecord[record.id].length} Issue(s)</Badge>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Assessment Issues</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              {issuesByRecord[record.id].map((issue, idx) => (
+                                <div key={idx} className="border rounded p-3 bg-muted/40">
+                                  <div className="flex flex-wrap gap-2 mb-1">
+                                    <Badge variant="outline">Row {issue.rowNumber}</Badge>
+                                    <Badge variant="outline">Hole {issue.holeNumber}</Badge>
+                                    {issue.plantId && <Badge variant="secondary">Plant {issue.plantId}</Badge>}
+                                    {issue.suckerId && <Badge variant="secondary">Sucker {issue.suckerId}</Badge>}
+                                    <Badge>{issue.issueType}</Badge>
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">{issue.description}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      ) : (
+                        <Badge variant="outline">No Issues</Badge>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

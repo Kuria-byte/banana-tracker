@@ -14,8 +14,8 @@ import {
   calculateMaxPossibleScore,
 } from "@/lib/mock-data/farm-health-scoring"
 import { db } from "@/db/client"
-import { farmInspections, inspectionMetrics } from "@/db/schema"
-import { eq, and, gte, lte } from "drizzle-orm"
+import { farmInspections, inspectionMetrics, inspectionIssues } from "@/db/schema"
+import { eq, and, gte, lte, inArray } from "drizzle-orm"
 
 // Get all scoring parameters (metric definitions)
 export async function getScoringParameters() {
@@ -111,12 +111,93 @@ export async function deleteScoringParameter(id: string) {
   }
 }
 
-// Create a new scoring record (inspection)
+// Create a new inspection issue
+export async function createInspectionIssue(
+  inspectionId: string,
+  plotId: string,
+  rowNumber: number,
+  holeNumber: number,
+  issueType: string,
+  description: string,
+  status: string = "Open",
+  plantId?: string,
+  suckerId?: string,
+) {
+  try {
+    const [inserted] = await db.insert(inspectionIssues).values({
+      inspectionId: Number(inspectionId),
+      plotId: plotId ? Number(plotId) : undefined,
+      rowNumber,
+      holeNumber,
+      plantId: plantId ? Number(plantId) : undefined,
+      suckerId: suckerId ? Number(suckerId) : undefined,
+      issueType,
+      description,
+      status,
+      createdAt: new Date(),
+    }).returning()
+    return { success: true, data: inserted }
+  } catch (error) {
+    console.error("Error creating inspection issue:", error)
+    return { success: false, error: "Failed to create inspection issue" }
+  }
+}
+
+// Get all issues for an inspection
+export async function getInspectionIssuesByInspectionId(inspectionId: string) {
+  try {
+    const issues = await db.select().from(inspectionIssues).where(eq(inspectionIssues.inspectionId, Number(inspectionId)))
+    return { success: true, data: issues }
+  } catch (error) {
+    console.error("Error fetching inspection issues:", error)
+    return { success: false, error: "Failed to fetch inspection issues" }
+  }
+}
+
+// Get top issues for a farm in a given month/year
+export async function getFarmIssuesSummary(farmId: string, year: number, month: number) {
+  try {
+    // Get all inspections for the farm in the month
+    const startDate = new Date(year, month - 1, 1)
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999)
+    const inspections = await db.select().from(farmInspections)
+      .where(and(
+        eq(farmInspections.farmId, Number(farmId)),
+        gte(farmInspections.inspectionDate, startDate),
+        lte(farmInspections.inspectionDate, endDate)
+      ))
+    const inspectionIds = inspections.map(i => i.id)
+    if (inspectionIds.length === 0) return { success: true, data: [] }
+    // Get all issues for these inspections
+    const issues = await db.select().from(inspectionIssues)
+      .where(inArray(inspectionIssues.inspectionId, inspectionIds))
+    // Aggregate by type, row, hole, etc.
+    const typeCounts: Record<string, number> = {}
+    issues.forEach(issue => {
+      if (issue.issueType) {
+        typeCounts[issue.issueType] = (typeCounts[issue.issueType] || 0) + 1
+      }
+    })
+    // Top 3 issues
+    const topIssues = Object.entries(typeCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([type, count]) => ({ type, count }))
+    return { success: true, data: { topIssues, total: issues.length } }
+  } catch (error) {
+    console.error("Error fetching farm issues summary:", error)
+    return { success: false, error: "Failed to fetch farm issues summary" }
+  }
+}
+
+// Update createScoringRecord to accept issueIds
 export async function createScoringRecord(
   farmId: string,
   parameterScores: ScoringParameterRecord[],
   notes: string,
-  userId: string,
+  userId: number, // Inspector user ID (must be number)
+  plotId?: string,
+  issueIds?: number[],
 ) {
   try {
     // Fetch metric definitions for maxPoints
@@ -131,11 +212,13 @@ export async function createScoringRecord(
     // Insert into farmInspections
     const [inserted] = await db.insert(farmInspections).values({
       farmId: Number(farmId),
+      plotId: plotId ? Number(plotId) : undefined,
       inspectionDate: new Date(),
-      inspector: userId,
+      inspector: userId, // Store as number
       score: totalScore,
       notes,
       metrics: metricsJson,
+      issueIds: issueIds ?? [],
       createdAt: new Date(),
       updatedAt: new Date(),
     }).returning()

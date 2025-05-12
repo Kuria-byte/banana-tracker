@@ -142,12 +142,29 @@ export const growthRecords: any = pgTable("growth_records", {
 export const farmInspections = pgTable("farm_inspections", {
   id: serial("id").primaryKey(),
   farmId: integer("farm_id").references(() => farms.id).notNull(),
+  plotId: integer("plot_id").references(() => plots.id),
   inspectionDate: timestamp("inspection_date").defaultNow().notNull(),
   inspector: varchar("inspector", { length: 255 }),
   score: integer("score"),
   notes: text("notes"),
+  issueIds: integer("issue_ids").array(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  metrics: json("metrics"),
+})
+
+// Inspection issues table
+export const inspectionIssues = pgTable("inspection_issues", {
+  id: serial("id").primaryKey(),
+  inspectionId: integer("inspection_id").references(() => farmInspections.id).notNull(),
+  plotId: integer("plot_id").references(() => plots.id),
+  rowNumber: integer("row_number"),
+  holeNumber: integer("hole_number"),
+  issueType: varchar("issue_type", { length: 64 }),
+  description: text("description"),
+  status: varchar("status", { length: 32 }).default("Open"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at"),
 })
 
 // Inspection metrics

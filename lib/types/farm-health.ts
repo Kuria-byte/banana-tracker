@@ -13,12 +13,14 @@ export interface ScoringParameter {
 export interface ScoringRecord {
   id: string
   farmId: string
+  plotId?: string // Optional: plot-level scoring
   date: string // ISO date string
   parameters: ScoringParameterRecord[]
   totalScore: number
   maxPossibleScore: number
   healthStatus: HealthStatus
   notes?: string
+  issueIds?: string[] // Optional: references to inspection_issues
   createdById: string
   createdAt: string // ISO date string
   updatedAt?: string // ISO date string
@@ -62,4 +64,19 @@ export function determineHealthStatus(scorePercentage: number): HealthStatus {
   } else {
     return "Poor"
   }
+}
+
+export interface InspectionIssue {
+  id: string
+  inspectionId: string
+  plotId?: string
+  rowNumber?: number
+  holeNumber?: number
+  plantId?: string
+  suckerId?: string
+  issueType?: string
+  description?: string
+  status?: string
+  createdAt: string
+  resolvedAt?: string
 }

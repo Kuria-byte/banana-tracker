@@ -14,6 +14,7 @@ import {
 import { FarmHealthScoringForm } from "@/components/forms/farm-health-scoring-form"
 import type { ScoringParameter } from "@/lib/types/farm-health"
 import { getScoringParameters } from "@/app/actions/farm-health-actions"
+import { getPlotsByFarmId } from "@/app/actions/plot-actions"
 
 interface FarmHealthScoringModalProps {
   trigger: React.ReactNode
@@ -30,17 +31,26 @@ export function FarmHealthScoringModal({
 }: FarmHealthScoringModalProps) {
   const [open, setOpen] = useState(false)
   const [parameters, setParameters] = useState<ScoringParameter[]>([])
+  const [plots, setPlots] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function loadParameters() {
+    async function loadParametersAndPlots() {
       try {
-        const result = await getScoringParameters()
-        if (result.success) {
-          setParameters(result.data)
+        const [paramResult, plotResult] = await Promise.all([
+          getScoringParameters(),
+          getPlotsByFarmId(Number(farmId)),
+        ])
+        if (paramResult.success) {
+          setParameters(paramResult.data)
         } else {
-          setError(result.error || "Failed to load scoring parameters")
+          setError(paramResult.error || "Failed to load scoring parameters")
+        }
+        if (plotResult.success) {
+          setPlots(plotResult.plots)
+        } else {
+          setError(plotResult.error || "Failed to load plots")
         }
       } catch (err) {
         setError("An unexpected error occurred")
@@ -51,9 +61,9 @@ export function FarmHealthScoringModal({
     }
 
     if (open) {
-      loadParameters()
+      loadParametersAndPlots()
     }
-  }, [open])
+  }, [open, farmId])
 
   const handleSuccess = () => {
     setOpen(false)
@@ -77,7 +87,7 @@ export function FarmHealthScoringModal({
             <p className="text-red-500">{error}</p>
           </div>
         ) : (
-          <FarmHealthScoringForm farmId={farmId} parameters={parameters} onSuccess={handleSuccess} />
+          <FarmHealthScoringForm farmId={farmId} parameters={parameters} plots={plots} onSuccess={handleSuccess} />
         )}
       </DialogContent>
     </Dialog>
