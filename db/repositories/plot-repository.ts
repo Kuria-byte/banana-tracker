@@ -33,6 +33,7 @@ export async function getPlotById(id: number): Promise<Plot | null> {
     plantedDate: dbPlot.plantedDate ? dbPlot.plantedDate.toISOString?.() ?? dbPlot.plantedDate : undefined,
     cropType: dbPlot.cropType ?? undefined,
     status: dbPlot.status ?? undefined,
+    leaseYears: dbPlot.leaseYears ?? null,
   }
 }
 
@@ -60,6 +61,7 @@ export async function createPlot(values: PlotFormValues): Promise<Plot> {
       holeCount: values.holeCount ?? 0,
       plantCount: values.plantCount ?? 0,
       layoutStructure: values.layoutStructure ?? null,
+      leaseYears: values.leaseYears ?? null,
     }
 
     const result = await db.insert(plots).values(plotData).returning()
@@ -87,6 +89,7 @@ export async function updatePlot(id: number, values: PlotFormValues): Promise<Pl
       holeCount: values.holeCount ?? 0,
       plantCount: values.plantCount ?? 0,
       layoutStructure: values.layoutStructure ?? null,
+      leaseYears: values.leaseYears ?? null,
       updatedAt: new Date(),
     }
 
@@ -155,6 +158,7 @@ function plotDbToModel(dbPlot: any): Plot {
     plantedDate: dbPlot.plantedDate ? dbPlot.plantedDate.toISOString?.() ?? dbPlot.plantedDate : undefined,
     cropType: dbPlot.cropType ?? undefined,
     status: dbPlot.status ?? undefined,
+    leaseYears: dbPlot.leaseYears ?? null,
   }
 }
 

@@ -29,6 +29,7 @@ export interface Plot {
   soilType: string;
   rowCount: number;
   plantCount: number;
+  leaseYears?: number | null;
   holes: number;
   layoutStructure: RowData[];
   createdAt: string;

@@ -1,15 +1,19 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+// File: /middleware.ts
+import { NextResponse, type NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // This is a simplified middleware that doesn't actually check authentication
-  // since we're using client-side auth. It just ensures API routes work properly.
-  return NextResponse.next()
+  // Get response headers
+  const response = NextResponse.next();
+  
+  // Add Cross-Origin Isolation headers
+  response.headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
+  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  
+  return response;
 }
 
+// Only apply these headers to the assistant page to avoid affecting other parts
+// of your application that might have cross-origin requirements
 export const config = {
-  matcher: [
-    // We're not matching any routes since we're handling auth client-side
-    // This is just a placeholder to keep the middleware file
-  ],
-}
+  matcher: ['/assistant/:path*'],
+};

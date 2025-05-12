@@ -9,7 +9,8 @@ import { MobileNav } from "@/components/mobile-nav"
 import { Header } from "@/components/header"
 import { QuickActions } from "@/components/quick-actions"
 import { AuthProvider } from "@/lib/auth/auth-context"
-import { Toaster } from "@/components/ui/toaster"
+import { ToastProvider } from "@/components/ui/toast";
+
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -28,7 +29,12 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}><StackProvider app={stackServerApp}><StackTheme>
         <AuthProvider>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
             <div className="flex min-h-screen flex-col">
               <Header />
               <main className="flex-1 pb-16 md:pb-0">{children}</main>
@@ -39,7 +45,7 @@ export default function RootLayout({
             </div>
           </ThemeProvider>
         </AuthProvider>
-        <Toaster />
+        <ToastProvider />
       </StackTheme></StackProvider></body>
     </html>
   )

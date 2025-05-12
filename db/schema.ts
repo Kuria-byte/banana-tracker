@@ -74,6 +74,7 @@ export const plots = pgTable("plots", {
   plantCount: integer("plant_count").default(0),
   layoutStructure: json("layout_structure"),
   soilType: varchar("soil_type", { length: 64 }),
+  leaseYears: integer("lease_years"),
 })
 
 // Rows table

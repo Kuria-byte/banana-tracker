@@ -32,9 +32,15 @@ import { TaskFormModal } from "@/components/modals/task-form-modal";
 import { GrowthFormModal } from "@/components/modals/growth-form-modal";
 import { FarmHealthScoringModal } from "@/components/modals/farm-health-scoring-modal";
 import { HarvestFormModal } from "@/components/modals/harvest-form-modal";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import PlotGrowthTab from "@/components/growth/PlotGrowthTab";
-
+import { ImprovedPlotCard } from "@/components/plots/ImprovedPlotCard";
 
 export default async function FarmDetailPage({
   params,
@@ -199,7 +205,7 @@ export default async function FarmDetailPage({
           </TabsTrigger>
           <TabsTrigger value="health" className="flex items-center">
             <Activity className="mr-2 h-4 w-4" />
-            Health 
+            Health
           </TabsTrigger>
         </TabsList>
 
@@ -248,8 +254,8 @@ export default async function FarmDetailPage({
           </div>
 
           {plots.length === 0 ? (
-            <div className="text-center py-12 border rounded-lg">
-              <p className="text-muted-foreground">
+            <div className="text-center py-12 border rounded-lg dark:border-gray-700">
+              <p className="text-muted-foreground dark:text-gray-400">
                 No plots available for this farm
               </p>
               <PlotFormModal
@@ -260,59 +266,14 @@ export default async function FarmDetailPage({
               />
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {plots.map((plot) => (
-                <Card key={plot.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg">{plot.name}</CardTitle>
-                      <Badge
-                        variant="outline"
-                        className={`font-normal ${
-                          plot.status === "Good"
-                            ? "bg-green-100 text-green-800"
-                            : plot.status === "Average"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {plot.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Area</p>
-                        <p className="font-medium">{plot.area} acres</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Rows</p>
-                        <p className="font-medium">{plot.rowCount}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Soil Type</p>
-                        <p className="font-medium">{plot.soilType}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Established</p>
-                        <p className="font-medium">
-                          {new Date(plot.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex flex-col gap-2">
-                    {/* <Button asChild variant="outline" className="w-full">
-                      <Link href={`/farms/${farmId}/plots/${plot.id}`}>View Plot Details</Link>
-                    </Button> */}
-                    <Button asChild className="w-full">
-                      <Link href={`/farms/${farmId}/plots/${plot.id}/rows`}>
-                        Manage Rows
-                      </Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
+                <ImprovedPlotCard
+                  key={plot.id}
+                  plot={plot}
+                  farmId={farmId}
+                  users={users}
+                />
               ))}
             </div>
           )}
@@ -358,7 +319,13 @@ export default async function FarmDetailPage({
         </TabsContent>
 
         <TabsContent value="growth">
-          <PlotGrowthTab plots={plots} farmId={farmId} farm={farm} farms={[farm]} users={users} />
+          <PlotGrowthTab
+            plots={plots}
+            farmId={farmId}
+            farm={farm}
+            farms={[farm]}
+            users={users}
+          />
         </TabsContent>
         <TabsContent value="health">
           <div className="flex justify-between mb-4">

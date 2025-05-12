@@ -437,6 +437,28 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
 
           <FormField
             control={form.control}
+            name="leaseYears"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Lease Years</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="1"
+                    placeholder="Enter lease years"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
+                </FormControl>
+                <FormDescription>Number of years this plot is leased for (optional)</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
             name="soilType"
             render={({ field }) => (
               <FormItem>

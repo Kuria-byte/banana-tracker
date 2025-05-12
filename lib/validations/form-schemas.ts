@@ -59,6 +59,7 @@ export const plotFormSchema = z.object({
       notes: z.string().optional(),
     })
   ),
+  leaseYears: z.coerce.number().int().min(0).optional(),
 })
 
 export type PlotFormValues = z.infer<typeof plotFormSchema>
