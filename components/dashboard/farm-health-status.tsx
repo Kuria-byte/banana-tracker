@@ -5,36 +5,22 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { AlertTriangle, CheckCircle, HelpCircle, TrendingDown, TrendingUp } from "lucide-react"
 
 interface FarmHealthStatusProps {
-  healthCounts: {
-    Good: number
-    Average: number
-    Poor: number
-  }
-  previousHealthData?: {
-    Good: number
-    Average: number
-    Poor: number
-  }
+  healthStatuses: Array<{ farmId: number; healthStatus: string }>
 }
 
-export function FarmHealthStatus({ healthCounts, previousHealthData }: FarmHealthStatusProps) {
-  // Default previous data if not provided
-  const prevData = previousHealthData || {
-    Good: healthCounts.Good - 1,
-    Average: healthCounts.Average,
-    Poor: healthCounts.Poor + 1,
+export function FarmHealthStatus({ healthStatuses }: FarmHealthStatusProps) {
+  // Compute counts
+  const counts = { Good: 0, Average: 0, Poor: 0, NotAssessed: 0 }
+  for (const h of healthStatuses) {
+    if (h.healthStatus === "Good") counts.Good++
+    else if (h.healthStatus === "Average") counts.Average++
+    else if (h.healthStatus === "Poor") counts.Poor++
+    else counts.NotAssessed++
   }
-
-  // Calculate totals
-  const total = healthCounts.Good + healthCounts.Average + healthCounts.Poor
-  const goodPercent = total > 0 ? Math.round((healthCounts.Good / total) * 100) : 0
-  const averagePercent = total > 0 ? Math.round((healthCounts.Average / total) * 100) : 0
-  const poorPercent = total > 0 ? Math.round((healthCounts.Poor / total) * 100) : 0
-
-  // Calculate trends
-  const goodTrend = (healthCounts.Good || 0) - (prevData.Good || 0)
-  const averageTrend = (healthCounts.Average || 0) - (prevData.Average || 0)
-  const poorTrend = (healthCounts.Poor || 0) - (prevData.Poor || 0)
+  const total = counts.Good + counts.Average + counts.Poor + counts.NotAssessed
+  const goodPercent = total > 0 ? Math.round((counts.Good / total) * 100) : 0
+  const averagePercent = total > 0 ? Math.round((counts.Average / total) * 100) : 0
+  const poorPercent = total > 0 ? Math.round((counts.Poor / total) * 100) : 0
 
   return (
     <Card>
@@ -65,19 +51,7 @@ export function FarmHealthStatus({ healthCounts, previousHealthData }: FarmHealt
             </div>
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold">{goodPercent}%</span>
-              <span className="text-sm text-muted-foreground">({healthCounts.Good || 0} farms)</span>
-              {goodTrend > 0 && (
-                <span className="flex items-center text-green-500">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  {goodTrend}
-                </span>
-              )}
-              {goodTrend < 0 && (
-                <span className="flex items-center text-red-500">
-                  <TrendingDown className="h-4 w-4 mr-1" />
-                  {Math.abs(goodTrend)}
-                </span>
-              )}
+              <span className="text-sm text-muted-foreground">({counts.Good} farms)</span>
             </div>
           </div>
           <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
@@ -91,19 +65,7 @@ export function FarmHealthStatus({ healthCounts, previousHealthData }: FarmHealt
             </div>
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold">{averagePercent}%</span>
-              <span className="text-sm text-muted-foreground">({healthCounts.Average || 0} farms)</span>
-              {averageTrend > 0 && (
-                <span className="flex items-center text-yellow-500">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  {averageTrend}
-                </span>
-              )}
-              {averageTrend < 0 && (
-                <span className="flex items-center text-green-500">
-                  <TrendingDown className="h-4 w-4 mr-1" />
-                  {Math.abs(averageTrend)}
-                </span>
-              )}
+              <span className="text-sm text-muted-foreground">({counts.Average} farms)</span>
             </div>
           </div>
           <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
@@ -117,19 +79,7 @@ export function FarmHealthStatus({ healthCounts, previousHealthData }: FarmHealt
             </div>
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold">{poorPercent}%</span>
-              <span className="text-sm text-muted-foreground">({healthCounts.Poor || 0} farms)</span>
-              {poorTrend > 0 && (
-                <span className="flex items-center text-red-500">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  {poorTrend}
-                </span>
-              )}
-              {poorTrend < 0 && (
-                <span className="flex items-center text-green-500">
-                  <TrendingDown className="h-4 w-4 mr-1" />
-                  {Math.abs(poorTrend)}
-                </span>
-              )}
+              <span className="text-sm text-muted-foreground">({counts.Poor} farms)</span>
             </div>
           </div>
           <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
@@ -137,12 +87,12 @@ export function FarmHealthStatus({ healthCounts, previousHealthData }: FarmHealt
           </div>
         </div>
 
-        {healthCounts.Poor > 0 && (
+        {counts.Poor > 0 && (
           <div className="mt-6 flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-md border border-red-200 dark:border-red-900">
             <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-red-800 dark:text-red-300">
-                {healthCounts.Poor} {healthCounts.Poor === 1 ? "farm requires" : "farms require"} attention
+                {counts.Poor} {counts.Poor === 1 ? "farm requires" : "farms require"} attention
               </p>
               <p className="text-xs text-red-700 dark:text-red-400">
                 Immediate action recommended to prevent yield loss
@@ -151,7 +101,7 @@ export function FarmHealthStatus({ healthCounts, previousHealthData }: FarmHealt
           </div>
         )}
 
-        {healthCounts.Poor === 0 && healthCounts.Good > healthCounts.Average && (
+        {counts.Poor === 0 && counts.Good > counts.Average && (
           <div className="mt-6 flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-900">
             <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
             <div>

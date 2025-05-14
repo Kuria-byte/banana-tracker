@@ -386,3 +386,56 @@ export async function getInspectionIssuesByFarmId(farmId: string) {
     return { success: false, error: "Failed to fetch inspection issues by farmId" }
   }
 }
+
+// Get farms missing a recent inspection (e.g., last 30 days)
+export async function getFarmsMissingRecentInspection(days = 30) {
+  const allFarms = await db.select().from(farms)
+  const now = new Date()
+  const cutoff = new Date(now)
+  cutoff.setDate(now.getDate() - days)
+  const farmsMissingInspection = []
+  for (const farm of allFarms) {
+    // Get latest inspection for this farm
+    const [latestInspection] = await db.select().from(farmInspections)
+      .where(eq(farmInspections.farmId, farm.id))
+      .orderBy(desc(farmInspections.inspectionDate))
+      .limit(1)
+    if (!latestInspection || new Date(latestInspection.inspectionDate) < cutoff) {
+      farmsMissingInspection.push(farm)
+    }
+  }
+  return farmsMissingInspection
+}
+
+// Get plots/farms with poor watering scores in their latest inspection
+export async function getPlotsWithPoorWatering(thresholdPercent = 50) {
+  // Get all plots
+  const allPlots = await db.select().from(plots)
+  const results = []
+  // Get the metric definition for watering
+  const [wateringMetric] = await db.select().from(inspectionMetrics).where(eq(inspectionMetrics.metricName, "Watering"))
+  if (!wateringMetric) return []
+  const wateringKey = wateringMetric.id.toString()
+  const maxScore = wateringMetric.maxScore || 1
+  for (const plot of allPlots) {
+    // Get latest inspection for this plot
+    const [latestInspection] = await db.select().from(farmInspections)
+      .where(eq(farmInspections.plotId, plot.id))
+      .orderBy(desc(farmInspections.inspectionDate))
+      .limit(1)
+    if (latestInspection && latestInspection.metrics && (latestInspection.metrics as Record<string, any>)[wateringKey] !== undefined) {
+      const score = Number((latestInspection.metrics as Record<string, any>)[wateringKey])
+      const percent = (score / maxScore) * 100
+      if (percent < thresholdPercent) {
+        results.push({
+          plotId: plot.id,
+          plotName: plot.name,
+          farmId: plot.farmId,
+          score,
+          percent,
+        })
+      }
+    }
+  }
+  return results
+}

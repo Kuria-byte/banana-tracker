@@ -14,6 +14,8 @@ import { getAllFarms } from "@/db/repositories/farm-repository";
 import { getAllTasks } from "@/db/repositories/task-repository"
 import { getAllUsers } from "@/db/repositories/user-repository";
 import { getAllHarvests } from "@/db/repositories/harvest-repository";
+import { getFarmsHealthStatusFromPlots, getFarmsWithUnresolvedIssuesFromPlots, getFarmsMissingRecentInspection, getPlotsWithPoorWatering } from "@/app/actions/farm-health-actions"
+import Link from "next/link"
 
 function mapHealthStatus(status: string) {
   switch (status) {
@@ -43,6 +45,12 @@ export default async function Dashboard() {
   const farms = await getAllFarms();
   const users = await getAllUsers();
   const harvests = await getAllHarvests();
+
+  // New: Fetch inspection-based health and issues
+  const farmHealthStatuses = await getFarmsHealthStatusFromPlots();
+  const farmsWithUnresolvedIssues = await getFarmsWithUnresolvedIssuesFromPlots();
+  const farmsMissingInspection = await getFarmsMissingRecentInspection(30); // last 30 days
+  const plotsWithPoorWatering = await getPlotsWithPoorWatering(50); // less than 50%
 
   const farmsWithMappedStatus = farms.map(farm => ({
     ...farm,
@@ -77,6 +85,15 @@ export default async function Dashboard() {
   // Calculate total farm area
   const totalArea = farms.reduce((sum, farm) => sum + farm.area, 0)
 
+  // Urgent tasks: high priority, due within 3 days, not completed
+  const now = new Date();
+  const soon = new Date(now); soon.setDate(now.getDate() + 3);
+  const urgentTasks = tasks.filter(task =>
+    task.priority === "HIGH" &&
+    task.status !== "Completed" &&
+    task.dueDate && new Date(task.dueDate) <= soon && new Date(task.dueDate) >= now
+  );
+
   return (
     <div className="container px-4 py-6 md:px-6 md:py-8">
       {/* Enhanced greeting section */}
@@ -105,7 +122,7 @@ export default async function Dashboard() {
         />
         <StatsCard
           title="Health Concerns"
-          value={healthCounts["Poor"] || 0}
+          value={Object.keys(farmsWithUnresolvedIssues).length}
           icon={<AlertTriangle className="h-4 w-4 text-muted-foreground" />}
           description="Farms needing attention"
         />
@@ -113,20 +130,22 @@ export default async function Dashboard() {
 
       <div className="grid gap-4 mt-8 md:grid-cols-3">
         <div className="md:col-span-2 space-y-4">
-          <PersonalizedInsights />
-          <div className="grid gap-4 md:grid-cols-2">
-            <YieldDashboard harvests={harvests} />
-            <HarvestForecast />
+          <PersonalizedInsights 
+            farmsMissingInspection={farmsMissingInspection} 
+            plotsWithPoorWatering={plotsWithPoorWatering}
+            urgentTasks={urgentTasks}
+          />
+          <div className="grid gap-4 md:grid-cols-1">
+            <Link href="/yields" aria-label="View detailed yield and harvest analytics" className="block focus:outline-none focus:ring-2 focus:ring-primary rounded-lg">
+              <YieldDashboard harvests={harvests} />
+            </Link>
+            {/* <HarvestForecast /> */}
           </div>
           <TaskList tasks={tasks} limit={5} />
         </div>
         <div className="space-y-4">
         <FarmHealthStatus
-  healthCounts={{
-    Good: farmsWithMappedStatus.filter(f => f.healthStatus === "Good").length,
-    Average: farmsWithMappedStatus.filter(f => f.healthStatus === "Average").length,
-    Poor: farmsWithMappedStatus.filter(f => f.healthStatus === "Poor").length,
-  }}
+  healthStatuses={farmHealthStatuses}
 />
           <TeamOverview users={users.slice(0, 5)} />
           <KnowledgeLinkCard />
