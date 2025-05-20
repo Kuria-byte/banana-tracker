@@ -137,7 +137,7 @@ export default async function Dashboard() {
           />
           <div className="grid gap-4 md:grid-cols-1">
             <Link href="/yields" aria-label="View detailed yield and harvest analytics" className="block focus:outline-none focus:ring-2 focus:ring-primary rounded-lg">
-              <YieldDashboard harvests={harvests} />
+            <YieldDashboard harvests={harvests} />
             </Link>
             {/* <HarvestForecast /> */}
           </div>

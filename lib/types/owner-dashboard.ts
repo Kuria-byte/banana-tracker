@@ -3,13 +3,15 @@
 // Sales Data Types
 export interface SalesRecord {
   id: string
-  farmId: string
+  farmId: number
+  plotId?: number
+  userId?: number
   date: string // ISO date string
   product: string
   quantity: number
   unitPrice: number
   totalAmount: number
-  buyerId: string
+  buyerId: number
   buyerName: string
   paymentStatus: "Paid" | "Pending" | "Partial"
   paymentMethod?: "Cash" | "Bank Transfer" | "Mobile Money"
@@ -41,11 +43,15 @@ export interface SalesSummary {
 export interface ExpenseRecord {
   id: string
   farmId: string
+  plotId?: string
+  userId?: number | null
+  recordedBy?: number | null
   date: string // ISO date string
   category: string
   description: string
   amount: number
   paymentMethod: "Cash" | "Bank Transfer" | "Mobile Money"
+  status?: "Paid" | "Pending" | "Partial"
   receiptUrl?: string
   approvedById?: string
   approvedByName?: string
@@ -116,12 +122,14 @@ export interface ExpenseChartData {
 
 // Form Types
 export interface SalesFormData {
-  farmId: string
+  farmId: number
+  plotId?: number
+  userId?: number
   date: string
   product: string
   quantity: number
   unitPrice: number
-  buyerId: string
+  buyerId: number
   paymentStatus: "Paid" | "Pending" | "Partial"
   paymentMethod?: "Cash" | "Bank Transfer" | "Mobile Money"
   notes?: string
@@ -129,6 +137,8 @@ export interface SalesFormData {
 
 export interface ExpenseFormData {
   farmId: string
+  plotId?: string
+  userId?: string
   date: string
   category: string
   description: string
@@ -153,4 +163,28 @@ export interface FinancialReport {
   summary: SalesSummary | ExpenseSummary
   chartData: SalesChartData | ExpenseChartData
   records: SalesRecord[] | ExpenseRecord[]
+}
+
+// Budget Data Types
+export interface BudgetRecord {
+  id: string
+  farmId: string
+  plotId?: string
+  userId?: string
+  year: number
+  category?: string
+  amount: number
+  notes?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface BudgetFormData {
+  farmId: string
+  plotId?: string
+  userId?: string
+  year: number
+  category?: string
+  amount: number
+  notes?: string
 }

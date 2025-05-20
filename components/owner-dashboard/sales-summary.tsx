@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getSalesSummary, getSalesChartData, getAllSalesRecords } from "@/app/actions/owner-dashboard-actions"
-import type { SalesSummary as SalesSummaryType, SalesChartData, SalesRecord } from "@/lib/types/owner-dashboard"
+import type { SalesSummary as SalesSummaryType, SalesChartData, SalesRecord, DashboardPeriod } from "@/lib/types/owner-dashboard"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ArrowDown, ArrowUp, BarChart3, DollarSign, Users } from "lucide-react"
 import { BarChart } from "@/components/ui/bar-chart"
@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { format } from "date-fns"
 
 interface SalesSummaryProps {
-  period?: "week" | "month" | "quarter" | "year"
+  period?: DashboardPeriod
 }
 
 export function SalesSummary({ period = "month" }: SalesSummaryProps) {
@@ -94,7 +94,7 @@ export function SalesSummary({ period = "month" }: SalesSummaryProps) {
     )
   }
 
-  const formattedData = chartData
+  const formattedData = chartData && chartData.labels && chartData.values
     ? {
         labels: chartData.labels,
         datasets: [

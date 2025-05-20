@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getExpenseSummary, getExpenseChartData, getAllExpenseRecords } from "@/app/actions/owner-dashboard-actions"
+import { getExpenseSummary, getExpenseChartData, getAllExpenseRecords, getBudgetSummary } from "@/app/actions/owner-dashboard-actions"
 import type {
   ExpenseSummary as ExpenseSummaryType,
   DashboardPeriod,
@@ -24,50 +24,101 @@ interface ExpenseSummaryProps {
 }
 
 export function ExpenseSummary({ period = "month" }: ExpenseSummaryProps) {
-  const [loading, setLoading] = useState(true)
-  const [expenseSummary, setExpenseSummary] = useState<ExpenseSummaryType | null>(null)
-  const [chartData, setChartData] = useState<ExpenseChartData | null>(null)
-  const [recentExpenses, setRecentExpenses] = useState<ExpenseRecord[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState<ExpenseSummaryType | null>(null);
+  const [rawData, setRawData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true)
+      setLoading(true);
+      setError(null);
       try {
-        const [summaryResult, chartResult, expensesResult] = await Promise.all([
-          getExpenseSummary(period),
-          getExpenseChartData(period),
-          getAllExpenseRecords(period),
-        ])
-
-        if (summaryResult.success && summaryResult.data) {
-          setExpenseSummary(summaryResult.data)
+        // Just fetch the expense records directly
+        const expensesResult = await getAllExpenseRecords(period);
+        console.log("Raw expense records:", expensesResult);
+        if (expensesResult?.success && Array.isArray(expensesResult.data)) {
+          setRawData(expensesResult.data);
+          const expenses = expensesResult.data;
+          // Calculate totals
+          const totalAmount = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+          // Status amounts
+          const paidAmount = expenses
+            .filter(e => e.status === "Paid")
+            .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+          const pendingAmount = expenses
+            .filter(e => e.status === "Pending")
+            .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+          // Create category map
+          const categoryMap = new Map();
+          expenses.forEach(e => {
+            if (e.category) {
+              const cat = String(e.category);
+              categoryMap.set(cat, (categoryMap.get(cat) || 0) + Number(e.amount || 0));
+            }
+          });
+          // Get top categories
+          const topCats = Array.from(categoryMap.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([name, amount]) => ({
+              name,
+              category: name,
+              amount,
+              percentage: totalAmount ? (amount / totalAmount) * 100 : 0
+            }));
+          // Build summary manually
+          const calculatedSummary = {
+            totalExpenses: totalAmount,
+            expenseCount: expenses.length,
+            paidAmount,
+            pendingAmount,
+            partialAmount: 0, // Calculate if needed
+            budgetTotal: 1000000,
+            budgetRemaining: 1000000 - totalAmount,
+            budgetUtilizationPercentage: (totalAmount / 1000000) * 100,
+            percentageBudget: (totalAmount / 1000000) * 100,
+            topCategories: topCats,
+            recentExpenses: expenses
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .slice(0, 10)
+              .map(e => {
+                const mapped: any = {
+                  id: String(e.id),
+                  farmId: String(e.farmId),
+                  date: e.date instanceof Date ? e.date.toISOString() : String(e.date),
+                  category: e.category || 'Miscellaneous',
+                  description: e.description || '',
+                  amount: Number(e.amount || 0),
+                  paymentMethod: (e.paymentMethod || 'Cash') as 'Cash' | 'Bank Transfer' | 'Mobile Money',
+                  status: (e.status || 'Pending') as 'Paid' | 'Pending' | 'Partial',
+                  notes: e.notes || '',
+                };
+                if ('plotId' in e && e.plotId !== undefined && e.plotId !== null) {
+                  mapped.plotId = String(e.plotId);
+                }
+                if ('userId' in e && typeof e.userId === 'number') {
+                  mapped.userId = e.userId;
+                }
+                return mapped;
+              }),
+            comparisonWithPreviousPeriod: 0,
+            previousExpenses: 0,
+          };
+          console.log("Calculated summary:", calculatedSummary);
+          setSummary(calculatedSummary);
         } else {
-          setError(summaryResult.error || "Failed to fetch expense summary")
-        }
-
-        if (chartResult.success && chartResult.data) {
-          setChartData(chartResult.data)
-        }
-
-        if (expensesResult.success && expensesResult.data) {
-          // Get the 5 most recent expenses
-          const sortedExpenses = [...expensesResult.data]
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-            .slice(0, 5)
-
-          setRecentExpenses(sortedExpenses)
+          setError("Failed to fetch expense data");
         }
       } catch (err) {
-        setError("An error occurred while fetching data")
-        console.error(err)
+        console.error("Error in component:", err);
+        setError("An error occurred");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-
-    fetchData()
-  }, [period])
+    };
+    fetchData();
+  }, [period]);
 
   if (loading) {
     return (
@@ -83,10 +134,23 @@ export function ExpenseSummary({ period = "month" }: ExpenseSummaryProps) {
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
-  if (error || !expenseSummary) {
+  // Use default data structure when no data is available
+  const defaultSummary = {
+    totalExpenses: 0,
+    expenseCount: 0,
+    budgetTotal: 1000000,
+    budgetRemaining: 1000000,
+    budgetUtilizationPercentage: 0,
+    percentageBudget: 0,
+    topCategories: [],
+    recentExpenses: [],
+  };
+  const displayData = summary || defaultSummary;
+
+  if (error) {
     return (
       <Card>
         <CardHeader>
@@ -94,41 +158,20 @@ export function ExpenseSummary({ period = "month" }: ExpenseSummaryProps) {
           <CardDescription>Error loading data</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-red-500">{error || "No data available"}</p>
+          <p className="text-sm text-red-500">{error}</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
-  // Safely access percentageBudget with a fallback
-  const percentageBudget = expenseSummary.percentageBudget ?? expenseSummary.budgetUtilizationPercentage ?? 0
-
-  const formattedData = chartData
-    ? {
-        labels: chartData.categories,
-        datasets: [
-          {
-            label: "Expenses",
-            data: chartData.values,
-            backgroundColor: [
-              "rgba(239, 68, 68, 0.7)",
-              "rgba(249, 115, 22, 0.7)",
-              "rgba(234, 179, 8, 0.7)",
-              "rgba(16, 185, 129, 0.7)",
-              "rgba(59, 130, 246, 0.7)",
-            ],
-            borderColor: [
-              "rgba(239, 68, 68, 1)",
-              "rgba(249, 115, 22, 1)",
-              "rgba(234, 179, 8, 1)",
-              "rgba(16, 185, 129, 1)",
-              "rgba(59, 130, 246, 1)",
-            ],
-            borderWidth: 1,
-          },
-        ],
-      }
-    : null
+  const {
+    totalExpenses = 0,
+    budgetTotal = 0,
+    budgetRemaining = 0,
+    budgetUtilizationPercentage = 0,
+    percentageBudget = 0,
+    topCategories = [],
+  } = displayData;
 
   return (
     <Card className="overflow-hidden">
@@ -172,20 +215,20 @@ export function ExpenseSummary({ period = "month" }: ExpenseSummaryProps) {
                   </div>
                   <span className="text-sm font-medium text-muted-foreground">Total Expenses</span>
                 </div>
-                <p className="mt-2 text-2xl font-bold">{formatCurrency(expenseSummary.totalExpenses)}</p>
+                <p className="mt-2 text-2xl font-bold">{formatCurrency(totalExpenses)}</p>
                 <div className="mt-1 flex items-center text-xs">
-                  {expenseSummary.comparisonWithPreviousPeriod <= 0 ? (
+                  {totalExpenses <= 0 ? (
                     <>
                       <ArrowDown className="mr-1 h-3 w-3 text-green-500" />
                       <span className="font-medium text-green-500">
-                        {Math.abs(expenseSummary.comparisonWithPreviousPeriod).toFixed(1)}%
+                        {Math.abs(totalExpenses).toFixed(1)}%
                       </span>
                     </>
                   ) : (
                     <>
                       <ArrowUp className="mr-1 h-3 w-3 text-red-500" />
                       <span className="font-medium text-red-500">
-                        {Math.abs(expenseSummary.comparisonWithPreviousPeriod).toFixed(1)}%
+                        {Math.abs(totalExpenses).toFixed(1)}%
                       </span>
                     </>
                   )}
@@ -205,7 +248,6 @@ export function ExpenseSummary({ period = "month" }: ExpenseSummaryProps) {
                   <Progress
                     value={percentageBudget > 100 ? 100 : percentageBudget}
                     className={`h-2 ${percentageBudget > 90 ? "bg-red-200" : "bg-orange-200"}`}
-                    indicatorClassName={percentageBudget > 90 ? "bg-red-500" : "bg-orange-500"}
                   />
                 </div>
               </div>
@@ -217,29 +259,20 @@ export function ExpenseSummary({ period = "month" }: ExpenseSummaryProps) {
                   </div>
                   <span className="text-sm font-medium text-muted-foreground">Budget Remaining</span>
                 </div>
-                <p className="mt-2 text-2xl font-bold">{formatCurrency(expenseSummary.budgetRemaining)}</p>
+                <p className="mt-2 text-2xl font-bold">{formatCurrency(budgetRemaining)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  From {formatCurrency(expenseSummary.budgetTotal)} total budget
+                  From {formatCurrency(budgetTotal)} total budget
                 </p>
               </div>
             </div>
-
-            {formattedData && (
-              <div className="mt-6">
-                <h4 className="mb-2 text-sm font-medium">Expense Distribution</h4>
-                <div className="flex justify-center h-[200px] w-full">
-                  <PieChart data={formattedData} />
-                </div>
-              </div>
-            )}
           </TabsContent>
 
           <TabsContent value="recent" className="p-6 pt-4">
             <div className="space-y-4">
               <h4 className="text-sm font-medium">Recent Transactions</h4>
-              {recentExpenses.length > 0 ? (
+              {Array.isArray(displayData.recentExpenses) && displayData.recentExpenses.length > 0 ? (
                 <div className="space-y-3">
-                  {recentExpenses.map((expense) => (
+                  {displayData.recentExpenses.map((expense) => (
                     <div key={expense.id} className="flex items-center justify-between rounded-lg border p-3">
                       <div>
                         <p className="font-medium">{expense.category}</p>
@@ -268,7 +301,8 @@ export function ExpenseSummary({ period = "month" }: ExpenseSummaryProps) {
             <div className="space-y-4">
               <h4 className="text-sm font-medium">Top Expense Categories</h4>
               <div className="space-y-3">
-                {expenseSummary.topCategories.map((category) => (
+                {Array.isArray(topCategories) && topCategories.length > 0 ? (
+                  topCategories.map((category) => (
                   <div key={category.name} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{category.name}</span>
@@ -279,7 +313,10 @@ export function ExpenseSummary({ period = "month" }: ExpenseSummaryProps) {
                       <span className="text-xs text-muted-foreground">{category.percentage.toFixed(1)}%</span>
                     </div>
                   </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No categories found</p>
+                )}
               </div>
             </div>
           </TabsContent>

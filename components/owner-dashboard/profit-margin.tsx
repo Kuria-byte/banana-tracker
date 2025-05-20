@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getSalesSummary, getExpenseSummary } from "@/app/actions/owner-dashboard-actions"
-import type { SalesSummary, ExpenseSummary } from "@/lib/types/owner-dashboard"
+import type { SalesSummary, ExpenseSummary, DashboardPeriod } from "@/lib/types/owner-dashboard"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ArrowDown, ArrowUp, DollarSign } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 
 interface ProfitMarginProps {
-  period?: "week" | "month" | "quarter" | "year"
+  period?: DashboardPeriod
 }
 
 export function ProfitMargin({ period = "month" }: ProfitMarginProps) {
@@ -77,11 +77,11 @@ export function ProfitMargin({ period = "month" }: ProfitMarginProps) {
     )
   }
 
-  const profit = salesSummary.totalRevenue - expenseSummary.totalExpenses
-  const profitMargin = (profit / salesSummary.totalRevenue) * 100
+  const profit = (salesSummary?.totalRevenue ?? 0) - (expenseSummary?.totalExpenses ?? 0)
+  const profitMargin = (salesSummary?.totalRevenue ?? 0) > 0 ? (profit / (salesSummary?.totalRevenue ?? 1)) * 100 : 0
   const previousProfitMargin =
-    salesSummary.previousRevenue > 0
-      ? ((salesSummary.previousRevenue - expenseSummary.previousExpenses) / salesSummary.previousRevenue) * 100
+    (salesSummary?.previousRevenue ?? 0) > 0
+      ? (((salesSummary?.previousRevenue ?? 0) - (expenseSummary?.previousExpenses ?? 0)) / (salesSummary?.previousRevenue ?? 1)) * 100
       : 0
   const marginChange = profitMargin - previousProfitMargin
 

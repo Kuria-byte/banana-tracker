@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import type { DashboardPeriod, ExpenseRecord, ExpenseSummary as ExpenseSummaryType } from "@/lib/types/owner-dashboard"
 import Link from "next/link"
 import { ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -12,11 +13,26 @@ import { PeriodSelector } from "@/components/owner-dashboard/period-selector"
 import { ProfitMargin } from "@/components/owner-dashboard/profit-margin"
 import { SalesFormModal } from "@/components/modals/sales-form-modal"
 import { ExpenseFormModal } from "@/components/modals/expense-form-modal"
+import { BudgetFormModal } from "@/components/modals/budget-form-modal"
 import { ReportModal } from "@/components/modals/report-modal"
 import { FileText } from "lucide-react"
+import { getAllExpenseRecords } from "@/app/actions/owner-dashboard-actions"
+import { useRouter, useSearchParams } from "next/navigation"
 
-export function OwnerDashboard() {
-  const [period, setPeriod] = useState<"week" | "month" | "quarter" | "year">("month")
+interface OwnerDashboardProps {
+  period: DashboardPeriod
+}
+
+export function OwnerDashboard({ period }: OwnerDashboardProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Handler for period change: update URL search param
+  function handlePeriodChange(newPeriod: DashboardPeriod) {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.set("period", newPeriod);
+    router.replace(`?${params.toString()}`);
+  }
 
   return (
     <div className="space-y-6">
@@ -40,6 +56,7 @@ export function OwnerDashboard() {
         <div className="flex flex-wrap gap-2">
           <SalesFormModal />
           <ExpenseFormModal />
+          <BudgetFormModal />
           <ReportModal />
           <Button variant="outline" asChild>
             <Link href="/owner-dashboard/financial-records">
@@ -50,7 +67,7 @@ export function OwnerDashboard() {
         </div>
       </div>
 
-      <PeriodSelector period={period} onChange={setPeriod} />
+      <PeriodSelector period={period} onChange={handlePeriodChange} />
 
       <div className="grid gap-6 md:grid-cols-2">
         <SalesSummary period={period} />
@@ -58,9 +75,7 @@ export function OwnerDashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <ProfitMargin period={period} />
-        <FarmHealthSummary />
-        <FarmPerformance period={period} />
+     
       </div>
     </div>
   )
