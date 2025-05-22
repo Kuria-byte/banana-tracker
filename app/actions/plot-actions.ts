@@ -5,7 +5,7 @@ import type { PlotFormValues } from "@/lib/validations/form-schemas"
 import * as plotRepository from "@/db/repositories/plot-repository"
 import { updatePlotLayout } from "@/db/repositories/plot-repository"
 import type { RowData, HoleData } from "@/lib/types/plot"
-import { createGrowthRecord } from "@/db/repositories/growth-records-repository"
+import { createGrowthRecord, createGrowthRecordsBatch } from "@/db/repositories/growth-records-repository"
 
 export async function addPlot(values: PlotFormValues) {
   try {
@@ -42,16 +42,37 @@ export async function addPlot(values: PlotFormValues) {
     if (Array.isArray(updatedLayout) && updatedLayout.length > 0) {
       console.log("Processing layout structure for growth records...")
       
+      // Collect all growth records to create in batch
+      const growthRecordsToCreate: Array<{
+        farmId: number;
+        plotId: number;
+        rowNumber: number;
+        holeNumber: number;
+        isMainPlant: boolean;
+        parentPlantId?: number;
+        stage: string;
+        recordDate: Date;
+        notes?: string;
+        metrics: object;
+      }> = [];
+      
+      // Track planted holes for processing
+      const plantedHoles: Array<{
+        row: any;
+        hole: any;
+        suckerCount: number;
+      }> = [];
+
+      // First pass: collect all planted holes and prepare main plant records
       for (const row of updatedLayout) {
         if (!Array.isArray(row.holes)) continue;
         
         for (const hole of row.holes) {
           if (hole.status === "PLANTED") {
-            try {
-              console.log(`Creating growth record for row ${row.rowNumber}, hole ${hole.holeNumber}`)
-              
-              // Create main plant growth record
-              const mainGrowthRecord = await createGrowthRecord({
+            console.log(`Preparing growth record for row ${row.rowNumber}, hole ${hole.holeNumber}`)
+            
+            // Add main plant record
+            growthRecordsToCreate.push({
                 farmId: Number(values.farmId),
                 plotId: newPlot.id,
                 rowNumber: row.rowNumber,
@@ -61,61 +82,157 @@ export async function addPlot(values: PlotFormValues) {
                 recordDate: hole.plantedDate ? new Date(hole.plantedDate) : new Date(),
                 notes: hole.notes || undefined,
                 metrics: {},
-              })
-              
-              hole.mainPlantId = mainGrowthRecord.id;
-              
-              // Generate suckers based on currentSuckerCount
+            });
+
+            // Track this hole for sucker processing
               const suckerCount = hole.currentSuckerCount ?? 0;
-              const suckerIds: number[] = [];
+            if (suckerCount > 0) {
+              plantedHoles.push({ row, hole, suckerCount });
+            }
+            
+            totalPlants += 1 + suckerCount;
+          }
+        }
+      }
+
+      if (growthRecordsToCreate.length > 0) {
+        console.log(`Creating ${growthRecordsToCreate.length} main plant growth records in batch...`);
+        
+        try {
+          // Create main plant records in batch
+          const createdMainPlants = await createGrowthRecordsBatch(growthRecordsToCreate);
+          console.log(`Successfully created ${createdMainPlants.length} main plant records`);
+          
+          // Map main plant IDs back to holes
+          const mainPlantMap = new Map<string, number>();
+          createdMainPlants.forEach((record, index) => {
+            const originalRecord = growthRecordsToCreate[index];
+            const key = `${originalRecord.rowNumber}-${originalRecord.holeNumber}`;
+            mainPlantMap.set(key, record.id);
+          });
+
+          // Update holes with main plant IDs
+          for (const row of updatedLayout) {
+            for (const hole of row.holes) {
+              if (hole.status === "PLANTED") {
+                const key = `${row.rowNumber}-${hole.holeNumber}`;
+                const mainPlantId = mainPlantMap.get(key);
+                if (mainPlantId) {
+                  hole.mainPlantId = mainPlantId;
+                  hole.activePlantIds = [mainPlantId];
+                }
+              }
+            }
+          }
+
+          // Debug log to verify main plant ID mapping
+          console.log("Main Plant ID Mapping Results:");
+          for (const row of updatedLayout) {
+            for (const hole of row.holes) {
+              if (hole.status === "PLANTED") {
+                console.log(`Row ${row.rowNumber} Hole ${hole.holeNumber}: MainPlant=${hole.mainPlantId}`);
+              }
+            }
+          }
+
+          // Second pass: create sucker records in batch
+          if (plantedHoles.length > 0) {
+            console.log(`Creating sucker records for ${plantedHoles.length} holes...`);
+            
+            const suckerRecordsToCreate: Array<{
+              farmId: number;
+              plotId: number;
+              rowNumber: number;
+              holeNumber: number;
+              isMainPlant: boolean;
+              parentPlantId: number;
+              stage: string;
+              recordDate: Date;
+              notes?: string;
+              metrics: object;
+            }> = [];
+
+            // Prepare sucker records
+            for (const { row, hole, suckerCount } of plantedHoles) {
+              const key = `${row.rowNumber}-${hole.holeNumber}`;
+              const mainPlantId = mainPlantMap.get(key);
               
+              if (mainPlantId) {
               for (let i = 0; i < suckerCount; i++) {
-                const suckerGrowthRecord = await createGrowthRecord({
+                  suckerRecordsToCreate.push({
                   farmId: Number(values.farmId),
                   plotId: newPlot.id,
                   rowNumber: row.rowNumber,
                   holeNumber: hole.holeNumber,
                   isMainPlant: false,
-                  parentPlantId: mainGrowthRecord.id,
+                    parentPlantId: mainPlantId,
                   stage: "Sucker",
                   recordDate: hole.plantedDate ? new Date(hole.plantedDate) : new Date(),
                   notes: hole.notes || undefined,
                   metrics: {},
-                })
-                suckerIds.push(suckerGrowthRecord.id)
+                  });
+                }
               }
-              
-              hole.suckerIds = suckerIds
-              hole.activePlantIds = [mainGrowthRecord.id, ...suckerIds]
-              hole.currentSuckerCount = suckerIds.length
-              totalPlants += 1 + suckerIds.length
-              
-            } catch (err) {
-              console.error(`Failed to create growth record for row ${row.rowNumber}, hole ${hole.holeNumber}:`, err)
-              // Continue with other holes - don't fail the entire operation
+            }
+
+            if (suckerRecordsToCreate.length > 0) {
+              console.log(`Creating ${suckerRecordsToCreate.length} sucker records in batch...`);
+              const createdSuckers = await createGrowthRecordsBatch(suckerRecordsToCreate);
+              console.log(`Successfully created ${createdSuckers.length} sucker records`);
+
+              // Map sucker IDs back to holes
+              let suckerIndex = 0;
+              for (const { row, hole, suckerCount } of plantedHoles) {
+                const suckerIds: number[] = [];
+                for (let i = 0; i < suckerCount; i++) {
+                  if (suckerIndex < createdSuckers.length) {
+                    suckerIds.push(createdSuckers[suckerIndex].id);
+                    suckerIndex++;
+                  }
+                }
+                hole.suckerIds = suckerIds;
+                hole.activePlantIds = [hole.mainPlantId, ...suckerIds];
+                hole.currentSuckerCount = suckerIds.length;
+              }
+
+              // Debug log to verify complete ID mapping (main plants + suckers)
+              console.log("Complete ID Mapping Results:");
+              for (const row of updatedLayout) {
+                for (const hole of row.holes) {
+                  if (hole.status === "PLANTED") {
+                    console.log(`Row ${row.rowNumber} Hole ${hole.holeNumber}: MainPlant=${hole.mainPlantId}, Suckers=[${hole.suckerIds?.join(',')}], Active=[${hole.activePlantIds?.join(',')}]`);
+                  }
+                }
+              }
             }
           }
+
+        } catch (err) {
+          console.error("Failed to create growth records in batch:", err);
+          // Continue with the plot creation even if growth records fail
         }
       }
       
       // Update the plot's layoutStructure in the DB with mainPlantId/activePlantIds/suckerIds
       try {
-        await updatePlotLayout(newPlot.id, updatedLayout)
-        console.log("Layout structure updated successfully")
+        console.log("Updating layout structure with plant IDs...");
+        await updatePlotLayout(newPlot.id, updatedLayout);
+        console.log("Layout structure updated successfully");
       } catch (err) {
-        console.error("Failed to update layout structure:", err)
+        console.error("Failed to update layout structure:", err);
       }
       
       // Update plant_count in the plot
       try {
-        await plotRepository.updatePlot(newPlot.id, {
-          ...values,
-          plantCount: totalPlants,
-          layoutStructure: updatedLayout,
-        })
-        console.log(`Plant count updated to ${totalPlants}`)
+        console.log(`Updating plant count to ${totalPlants}...`);
+      await plotRepository.updatePlot(newPlot.id, {
+        ...values,
+        plantCount: totalPlants,
+        layoutStructure: updatedLayout,
+        });
+        console.log(`Plant count updated to ${totalPlants}`);
       } catch (err) {
-        console.error("Failed to update plant count:", err)
+        console.error("Failed to update plant count:", err);
       }
     }
 
@@ -137,6 +254,7 @@ export async function addPlot(values: PlotFormValues) {
   }
 }
 
+// Rest of the functions remain the same...
 export async function updatePlot(plotId: number, values: PlotFormValues) {
   try {
     console.log("updatePlot called with:", { plotId, values })
@@ -212,7 +330,7 @@ export async function getAllPlots() {
 
 // Get plot by ID for internal use
 export async function getPlotById(plotId: number) {
-  const plot = await plotRepository.getPlotById(plotId)
+    const plot = await plotRepository.getPlotById(plotId)
   if (!plot) throw new Error("Plot not found")
   return plot
 }

@@ -88,13 +88,15 @@ export function GrowthForm({
   isSubmitting = false,
   allowRowSelection = false,
   hole,
+  onSuccess,
+  onError,
 }: {
   onSubmit: (
     values: z.infer<typeof enhancedGrowthSchema> & {
       selectedRow?: string;
       selectedHoles?: string[];
     }
-  ) => void;
+  ) => Promise<{ success: boolean; message?: string; error?: string }> | void;
   defaultValues?: Partial<z.infer<typeof enhancedGrowthSchema>>;
   mode?: "individual" | "bulk";
   bulkSummary?: { plotName: string; plantCount: number; rowsInfo?: string };
@@ -105,6 +107,8 @@ export function GrowthForm({
   isSubmitting?: boolean;
   allowRowSelection?: boolean;
   hole?: any;
+  onSuccess?: () => void;
+  onError?: (error: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<string>("");
@@ -112,6 +116,8 @@ export function GrowthForm({
   const [activeTab, setActiveTab] = useState<string>(
     defaultValues?.isNewPlant ? "new-plant" : "record-growth"
   );
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
   // Create separate forms for each tab to avoid state conflicts
   const growthForm = useForm<z.infer<typeof enhancedGrowthSchema>>({
@@ -207,23 +213,37 @@ export function GrowthForm({
         (mode === "bulk" && selectedRow && selectedHoles.length > 0))) ||
       (activeTab === "new-plant" && selectedPlotId));
 
-  const handleSubmit = (values: any) => {
-    // Ensure isNewPlant is correctly set based on active tab
-    values.isNewPlant = activeTab === "new-plant";
-
-    // For bulk mode growth recording, add selected row/holes
-    if (activeTab === "record-growth" && mode === "bulk") {
-      values.selectedRow = selectedRow;
-      values.selectedHoles = selectedHoles;
+  const handleSubmit = async (values: any) => {
+    setServerError(null);
+    setPending(true);
+    try {
+      values.isNewPlant = activeTab === "new-plant";
+      if (activeTab === "record-growth" && mode === "bulk") {
+        values.selectedRow = selectedRow;
+        values.selectedHoles = selectedHoles;
+      }
+      if (activeTab === "record-growth" && mode === "individual" && hole) {
+        values.hole = {
+          rowNumber: hole.rowNumber,
+          holeNumber: hole.holeNumber,
+        };
+      }
+      const result = await onSubmit(values);
+      if (result && typeof result === "object") {
+        if (result.success) {
+          setServerError(null);
+          if (onSuccess) onSuccess();
+        } else {
+          setServerError(result.error || result.message || "Failed to record growth.");
+          if (onError) onError(result.error || result.message || "Failed to record growth.");
+        }
+      }
+    } catch (e: any) {
+      setServerError(e?.message || "Failed to record growth.");
+      if (onError) onError(e?.message || "Failed to record growth.");
+    } finally {
+      setPending(false);
     }
-    // For individual mode, add hole context if available
-    if (activeTab === "record-growth" && mode === "individual" && hole) {
-      values.hole = {
-        rowNumber: hole.rowNumber,
-        holeNumber: hole.holeNumber,
-      };
-    }
-    onSubmit(values);
   };
 
   return (
@@ -256,6 +276,7 @@ export function GrowthForm({
             <form
               onSubmit={growthForm.handleSubmit(handleSubmit)}
               className="space-y-6"
+              aria-live="polite"
             >
               {/* Context Information */}
               {mode === "individual" && hole && <PlantInfoCard hole={hole} />}
@@ -663,14 +684,21 @@ export function GrowthForm({
               <Button
                 type="submit"
                 className="w-full"
-                disabled={!isReadyToSubmit}
+                disabled={!isReadyToSubmit || pending}
               >
-                {isSubmitting ? (
-                  <LoadingButton text="Recording Growth..." />
+                {pending ? (
+                  <LoadingButton text={activeTab === "new-plant" ? "Adding Plants..." : "Recording Growth..."} />
                 ) : (
-                  "Record Growth Stage"
+                  activeTab === "new-plant"
+                    ? `Add ${safePlantCount > 1 ? `${safePlantCount} Plants` : "New Plant"}`
+                    : "Record Growth Stage"
                 )}
               </Button>
+              {serverError && (
+                <div className="mt-2 text-sm text-red-600" role="alert" aria-live="assertive">
+                  {serverError}
+                </div>
+              )}
             </form>
           </Form>
         </TabsContent>
@@ -681,6 +709,7 @@ export function GrowthForm({
             <form
               onSubmit={newPlantForm.handleSubmit(handleSubmit)}
               className="space-y-6"
+              aria-live="polite"
             >
               {/* Location Section for New Plant */}
               <Card>

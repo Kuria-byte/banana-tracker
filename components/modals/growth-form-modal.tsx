@@ -62,6 +62,7 @@ export function GrowthFormModal({ trigger, initialValues, mode = 'individual', b
         variant: "destructive",
       })
     }
+    return result;
   }
 
   return (
@@ -80,7 +81,17 @@ export function GrowthFormModal({ trigger, initialValues, mode = 'individual', b
               : 'Record growth information for your banana plants.'}
           </DialogDescription>
         </DialogHeader>
-        <GrowthForm onSubmit={handleSubmit} defaultValues={initialValues} mode={mode} bulkSummary={bulkSummary} farms={farms} plots={plots} users={users} hole={hole} />
+        <GrowthForm 
+          onSubmit={handleSubmit} 
+          defaultValues={initialValues} 
+          mode={mode} 
+          bulkSummary={bulkSummary} 
+          farms={farms} 
+          plots={plots} 
+          users={users} 
+          hole={hole}
+          onSuccess={() => setOpen(false)}
+        />
         <div className="mt-6 flex justify-end">
           <DialogClose asChild>
             <Button variant="outline" className="mr-2">

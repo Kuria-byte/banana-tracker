@@ -292,9 +292,9 @@ export default async function FarmDetailPage({
                     Established {establishedDate ? new Date(establishedDate).toLocaleDateString() : "N/A"}
                   </span>
                 </div> */}
-              </div>
-            </div>
-            
+        </div>
+      </div>
+
             <div className="flex gap-2 self-end">
               <Button
                 asChild
@@ -870,7 +870,7 @@ export default async function FarmDetailPage({
                     </div>
                   )}
                 </div>
-              </div>
+          </div>
 
               <div className="text-center py-8 border rounded-lg bg-gray-50/50 dark:bg-gray-900/20">
                 <Activity className="h-10 w-10 mx-auto text-primary/20 mb-4" />

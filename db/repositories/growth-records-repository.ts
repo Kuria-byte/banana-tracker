@@ -335,3 +335,17 @@ function getEstimatedHarvestDate(plantedDate: Date, currentStage: string): Date 
   }
   return harvestDate;
 } 
+
+export async function createGrowthRecordsBatch(records: any[]): Promise<any[]> {
+  if (!Array.isArray(records) || records.length === 0) return [];
+  const batchSize = 100;
+  let createdRecords: any[] = [];
+  for (let i = 0; i < records.length; i += batchSize) {
+    const batch = records.slice(i, i + batchSize);
+    const result = await db.insert(growthRecords).values(batch).returning();
+    if (Array.isArray(result)) {
+      createdRecords = createdRecords.concat(result);
+    }
+  }
+  return createdRecords;
+} 

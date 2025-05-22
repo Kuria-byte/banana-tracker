@@ -243,12 +243,12 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
       const currentLayout = form.getValues('layoutStructure') || [];
       // Only regenerate if we don't have a layout or if the row count changed significantly
       if (currentLayout.length === 0 || currentLayout.length !== rowCount) {
-        try {
-          const layout = generateLayoutStructure(rowCount, holeCount, rowLength, rowSpacing)
-          form.setValue('layoutStructure', layout, { shouldValidate: false })
-        } catch (error) {
-          console.error("Error generating layout:", error)
-        }
+      try {
+        const layout = generateLayoutStructure(rowCount, holeCount, rowLength, rowSpacing)
+        form.setValue('layoutStructure', layout, { shouldValidate: false })
+      } catch (error) {
+        console.error("Error generating layout:", error)
+      }
       }
     } else if (rowCount === 0 || holeCount === 0) {
       form.setValue('layoutStructure', [], { shouldValidate: false })
@@ -278,61 +278,85 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
     fetchFarms()
   }, [])
 
-  // Function to update a specific row's hole count without affecting others
-  const updateRowHoleCount = (rowNumber: number, newHoleCount: number) => {
-    const currentLayout = form.getValues('layoutStructure') || [];
+
+ // Function to update a specific row's hole count without affecting others
+ const updateRowHoleCount = (rowNumber: number, newHoleCount: number) => {
+  const currentLayout = form.getValues('layoutStructure') || [];
+  
+  // First, we need to calculate the starting hole number for new holes in this row
+  let startingHoleNumber = 1;
+  for (let i = 0; i < currentLayout.length; i++) {
+    if (currentLayout[i].rowNumber < rowNumber) {
+      startingHoleNumber += (currentLayout[i].holes?.length || 0);
+    } else if (currentLayout[i].rowNumber === rowNumber) {
+      break;
+    }
+  }
+  
+  // Find the row and update its holes
+  const updatedLayout = currentLayout.map(row => {
+    if (row.rowNumber !== rowNumber) return row;
     
-    // Find the row and update its holes
-    const updatedLayout = currentLayout.map(row => {
-      if (row.rowNumber !== rowNumber) return row;
+    const currentHoles = row.holes || [];
+    let newHoles = [...currentHoles];
+    
+    if (newHoleCount > currentHoles.length) {
+      // Add new holes with correct sequential numbering
+      const defaultDate = form.getValues('dateEstablished') 
+        ? format(form.getValues('dateEstablished'), 'yyyy-MM-dd')
+        : bulkSettings.plantedDate || format(new Date(), 'yyyy-MM-dd');
       
-      const currentHoles = row.holes || [];
-      let newHoles = [...currentHoles];
-      
-      if (newHoleCount > currentHoles.length) {
-        // Add new holes
-        const defaultDate = form.getValues('dateEstablished') 
-          ? format(form.getValues('dateEstablished'), 'yyyy-MM-dd')
-          : bulkSettings.plantedDate || format(new Date(), 'yyyy-MM-dd');
-          
-        for (let h = currentHoles.length; h < newHoleCount; h++) {
-          newHoles.push({
-            holeNumber: h + 1,
-            status: 'PLANTED',
-            rowNumber: rowNumber,
-            plantHealth: 'Healthy',
-            mainPlantId: undefined,
-            activePlantIds: [],
-            targetSuckerCount: bulkSettings.targetSuckerCount,
-            currentSuckerCount: bulkSettings.currentSuckerCount,
-            plantedDate: defaultDate,
-            notes: bulkSettings.notes || '',
-            suckerIds: [],
-          });
-        }
-      } else if (newHoleCount < currentHoles.length) {
-        // Remove holes from the end
-        newHoles = newHoles.slice(0, newHoleCount);
+      // Calculate the next hole number to use
+      let nextHoleNumber = startingHoleNumber + currentHoles.length;
+        
+      for (let h = currentHoles.length; h < newHoleCount; h++) {
+        newHoles.push({
+          holeNumber: nextHoleNumber,
+          status: 'PLANTED',
+          rowNumber: rowNumber,
+          plantHealth: 'Healthy',
+          mainPlantId: undefined,
+          activePlantIds: [],
+          targetSuckerCount: bulkSettings.targetSuckerCount,
+          currentSuckerCount: bulkSettings.currentSuckerCount,
+          plantedDate: defaultDate,
+          notes: bulkSettings.notes || '',
+          suckerIds: [],
+        });
+        nextHoleNumber++;
       }
-      
-      return { ...row, holes: newHoles };
-    });
+    } else if (newHoleCount < currentHoles.length) {
+      // Remove holes from the end
+      newHoles = newHoles.slice(0, newHoleCount);
+    }
     
-    form.setValue('layoutStructure', updatedLayout, { shouldValidate: false });
-    
-    // Don't automatically update the total hole count - let user do it manually
-    toast({
-      title: "Row Updated",
-      description: `Row ${rowNumber} now has ${newHoleCount} holes. Use "Recalculate Total" to update the total count.`,
-      duration: 3000,
-    });
-  };
+    return { ...row, holes: newHoles };
+  });
+  
+  // Renumber all holes in subsequent rows to maintain sequential numbering
+  let currentHoleNumber = 1;
+  const finalLayout = updatedLayout.map(row => {
+    const renumberedHoles = row.holes.map(hole => ({
+      ...hole,
+      holeNumber: currentHoleNumber++
+    }));
+    return { ...row, holes: renumberedHoles };
+  });
+  
+  form.setValue('layoutStructure', finalLayout, { shouldValidate: false });
+  
+  // Don't automatically update the total hole count - let user do it manually
+  toast({
+    title: "Row Updated",
+    description: `Row ${rowNumber} now has ${newHoleCount} holes. Holes have been renumbered sequentially.`,
+    duration: 3000,
+  });
+};
 
   async function onSubmit(values: PlotFormValues) {
     console.log("Form submitted with values:", values)
     setFormError(null)
     setIsSubmitting(true)
-    
     try {
       // Use the actual layout structure from the form, not regenerated
       const actualLayoutStructure = values.layoutStructure || [];
@@ -354,11 +378,11 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
         // Fallback to auto-generation only if no manual config exists
         console.log("Using auto-generated layout");
         finalLayoutStructure = generateLayoutStructure(
-          Number(values.rowCount) || 0,
-          Number(values.holeCount) || 0,
-          rowLength,
-          rowSpacing
-        );
+        Number(values.rowCount) || 0,
+        Number(values.holeCount) || 0,
+        rowLength,
+        rowSpacing
+      );
       }
       
       // Ensure all values are of the correct type and explicitly include dateEstablished
@@ -387,16 +411,10 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
       
       // Try to call the server action
       let result
-      try {
-        result = isEditing && initialData?.id
-          ? await updatePlot(Number(initialData.id), payload)
-          : await addPlot(payload)
-        
-        console.log("Server action result:", result)
-      } catch (actionError: unknown) {
-        console.error("Server action error:", actionError)
-        const errorMessage = actionError instanceof Error ? actionError.message : "Unknown error"
-        throw new Error(`Server action failed: ${errorMessage}`)
+      if (isEditing && initialData?.id) {
+        result = await updatePlot(Number(initialData.id), payload)
+      } else {
+        result = await addPlot(payload)
       }
 
       if (result?.success && result?.plot) {
@@ -465,6 +483,13 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
         {formError && (
           <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-md">
             {formError}
+          </div>
+        )}
+        {/* Simple loading state */}
+        {isSubmitting && (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-md flex items-center gap-4">
+            <Loader2 className="animate-spin h-5 w-5 mr-2" />
+            <span>{isEditing ? "Updating plot..." : "Adding plot..."}</span>
           </div>
         )}
       
@@ -683,7 +708,7 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
         {/* Row Settings - Enhanced with manual control */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-medium text-sm text-gray-700">Row Configuration</h3>
+          <h3 className="font-medium text-sm text-gray-700">Row Configuration</h3>
             <div className="flex items-center gap-2">
               <label className="flex items-center gap-2 text-xs text-gray-600">
                 <input 
@@ -719,9 +744,9 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
                 <FormItem>
                   <FormLabel>Total Hole Count</FormLabel>
                   <div className="flex gap-2">
-                    <FormControl>
-                      <Input type="number" placeholder="Number of holes" {...field} value={field.value ?? 0} />
-                    </FormControl>
+                  <FormControl>
+                    <Input type="number" placeholder="Number of holes" {...field} value={field.value ?? 0} />
+                  </FormControl>
                     <Button 
                       type="button" 
                       size="sm" 
@@ -780,20 +805,20 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
           </div>
           
           <div className="flex gap-4">
-            <FormField
-              control={form.control}
-              name="plantCount"
-              render={({ field }) => (
+          <FormField
+            control={form.control}
+            name="plantCount"
+            render={({ field }) => (
                 <FormItem className="flex-1">
-                  <FormLabel>Plant Count</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="Number of plants" {...field} value={field.value ?? 0} />
-                  </FormControl>
-                  <FormDescription>Total number of plants in this plot</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormLabel>Plant Count</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="Number of plants" {...field} value={field.value ?? 0} />
+                </FormControl>
+                <FormDescription>Total number of plants in this plot</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
             
             {/* Manual layout control buttons */}
             <div className="flex flex-col gap-2 justify-end pb-6">
@@ -964,9 +989,9 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
                 <li key={i} className="mb-1 border-b pb-2">
                   <div className="flex items-center justify-between">
                     <span>
-                      Row {row.rowNumber}: {Array.isArray(row.holes) ? row.holes.length : 0} holes, 
-                      {row.length > 0 ? ` ${row.length}m length` : ' No length set'}, 
-                      {row.spacing > 0 ? ` ${row.spacing}m spacing` : ' No spacing set'}
+                  Row {row.rowNumber}: {Array.isArray(row.holes) ? row.holes.length : 0} holes, 
+                  {row.length > 0 ? ` ${row.length}m length` : ' No length set'}, 
+                  {row.spacing > 0 ? ` ${row.spacing}m spacing` : ' No spacing set'}
                     </span>
                     <div className="flex items-center gap-2">
                       <label className="text-xs flex items-center gap-1">
@@ -983,14 +1008,14 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
                           }}
                         />
                       </label>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setExpandedRows((prev) => ({ ...prev, [row.rowNumber]: !prev[row.rowNumber] }))}
-                      >
-                        {expandedRows[row.rowNumber] ? "Hide Holes" : "View Holes"}
-                      </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setExpandedRows((prev) => ({ ...prev, [row.rowNumber]: !prev[row.rowNumber] }))}
+                    >
+                      {expandedRows[row.rowNumber] ? "Hide Holes" : "View Holes"}
+                    </Button>
                     </div>
                   </div>
                   
