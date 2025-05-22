@@ -126,10 +126,10 @@ export function ImprovedPlotCard({ plot, farmId, users = [] }: ImprovedPlotCardP
           <div className="flex items-center">
             <Calendar className="mr-2 h-4 w-4 text-muted-foreground dark:text-gray-400" />
             <div>
-              <p className="text-muted-foreground text-xs dark:text-gray-400">Established</p>
+              <p className="text-muted-foreground text-xs dark:text-gray-400">Planted Date</p>
               <p className="font-medium dark:text-gray-200">
                 {plot.createdAt 
-                  ? new Date(plot.createdAt).toLocaleDateString()
+                  ? new Date(plot.plantedDate).toLocaleDateString()
                   : "N/A"}
               </p>
             </div>

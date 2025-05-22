@@ -20,6 +20,7 @@ async function getAllFarmsDb(): Promise<Farm[]> {
 async function getFarmByIdDb(id: number): Promise<Farm | null> {
   try {
     const result = await db.select().from(farms).where(eq(farms.id, id)).limit(1)
+    console.log("DB farm row:", result[0]);
     return result.length > 0 ? farmDbToModel(result[0]) : null
   } catch (error) {
     console.error(`Error fetching farm with id ${id} from database:`, error)
@@ -165,22 +166,23 @@ function deleteFarmMock(id: number): boolean {
 
 // Helper function to convert database farm to model farm
 function farmDbToModel(dbFarm: any): Farm {
+  console.log("Mapping DB farm to model:", dbFarm);
   return {
     id: dbFarm.id.toString(),
     name: dbFarm.name,
     location: dbFarm.location,
     area: dbFarm.size !== undefined && dbFarm.size !== null && !isNaN(Number(dbFarm.size)) ? Number(dbFarm.size) : 0,
     plotCount: dbFarm.plotCount !== undefined ? dbFarm.plotCount : 0,
-    healthStatus: dbFarm.health_status,
-    healthScore: dbFarm.health_score,
-    groupCode: dbFarm.group_code || "",
-    regionCode: dbFarm.region_code || "",
-    isActive: dbFarm.is_active,
-    creatorId: dbFarm.creator_id,
-    createdAt: dbFarm.created_at,
-    updatedAt: dbFarm.updated_at,
-    dateEstablished: dbFarm.created_at,
-    teamLeaderId: dbFarm.creator_id ? dbFarm.creator_id.toString() : "",
+    healthStatus: dbFarm.health_status || dbFarm.healthStatus,
+    healthScore: dbFarm.health_score || dbFarm.healthScore,
+    groupCode: dbFarm.group_code || dbFarm.groupCode || "",
+    regionCode: dbFarm.region_code || dbFarm.regionCode || "",
+    isActive: dbFarm.is_active || dbFarm.isActive,
+    creatorId: dbFarm.creator_id || dbFarm.creatorId,
+    createdAt: dbFarm.created_at || dbFarm.createdAt,
+    updatedAt: dbFarm.updated_at || dbFarm.updatedAt,
+    dateEstablished: dbFarm.created_at || dbFarm.createdAt,
+    teamLeaderId: dbFarm.creator_id ? dbFarm.creator_id.toString() : (dbFarm.creatorId ? dbFarm.creatorId.toString() : ""),
   }
 }
 

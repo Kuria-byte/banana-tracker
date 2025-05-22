@@ -70,6 +70,18 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 
+// Helper to get group code from any possible property
+function getGroupCode(farm: any): string {
+  return (
+    farm.groupCode ||
+    farm.group_code ||
+    farm.GroupCode ||
+    farm.groupcode ||
+    farm["group code"] ||
+    ""
+  );
+}
+
 export default async function FarmDetailPage({
   params,
 }: {
@@ -78,6 +90,8 @@ export default async function FarmDetailPage({
   const farmId = Number(params.id);
   const farm = await getFarmById(farmId);
   if (!farm) notFound();
+
+  console.log("farm object:", farm);
 
   const plots = await getPlotsByFarmId(farmId);
   const tasks = await getTasksByFarmId(farmId);
@@ -153,10 +167,14 @@ export default async function FarmDetailPage({
     }
   };
 
-  // Map DB fields to UI fields
-  const farmUI = {
+  // Ensure groupCode is always present (handles both DB and mock data)
+  const normalizedFarm = {
     ...farm,
-    healthStatus: farm.healthStatus as "Good" | "Average" | "Poor",
+    groupCode: getGroupCode(farm),
+  };
+  const farmUI = {
+    ...normalizedFarm,
+    healthStatus: normalizedFarm.healthStatus as "Good" | "Average" | "Poor",
     plotCount: plots.length,
   };
 
@@ -190,7 +208,7 @@ export default async function FarmDetailPage({
   const establishedDate =
     plots.length > 0
       ? plots
-          .map((p) => p.createdAt)
+          .map((p) => p.plantedDate)
           .filter(Boolean)
           .sort()[0]
       : null;
@@ -265,15 +283,15 @@ export default async function FarmDetailPage({
                 <span className="hidden md:inline">•</span>
                 <div className="flex items-center">
                   <Flag className="mr-1 h-4 w-4 flex-shrink-0" />
-                  <span>{farmUI.regionCode || "No region"}</span>
+                  <span>{getGroupCode(farmUI) || "No Group Code"}</span>
                 </div>
                 <span className="hidden md:inline">•</span>
-                <div className="flex items-center">
+                {/* <div className="flex items-center">
                   <Calendar className="mr-1 h-4 w-4 flex-shrink-0" />
                   <span>
                     Established {establishedDate ? new Date(establishedDate).toLocaleDateString() : "N/A"}
                   </span>
-                </div>
+                </div> */}
               </div>
             </div>
             
@@ -296,10 +314,10 @@ export default async function FarmDetailPage({
                     Record Assessment
                   </Button>
                 }
-              />
-            </div>
-          </div>
-          
+          />
+        </div>
+      </div>
+
           {/* Decorative Line */}
           <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 mb-1">
             <div 
@@ -400,11 +418,11 @@ export default async function FarmDetailPage({
                   <div 
                     className={cn(
                       "h-full rounded-full",
-                      avgScore30d >= 70 ? "bg-green-500" : 
-                      avgScore30d >= 50 ? "bg-yellow-500" : 
+                      (avgScore30d ?? 0) >= 70 ? "bg-green-500" : 
+                      (avgScore30d ?? 0) >= 50 ? "bg-yellow-500" : 
                       "bg-red-500"
                     )}
-                    style={{ width: `${avgScore30d ? Math.max(5, avgScore30d) : 5}%` }}
+                    style={{ width: `${Math.max(5, avgScore30d ?? 0)}%` }}
                   ></div>
                 </div>
               </div>
@@ -802,8 +820,8 @@ export default async function FarmDetailPage({
                       </div>
                     </div>
                   </div>
-                </div>
-                
+          </div>
+
                 <div className="rounded-lg border bg-card overflow-hidden">
                   <div className="border-b px-4 py-3 flex items-center justify-between bg-muted/20">
                     <h3 className="font-medium text-sm">Recent Issues</h3>

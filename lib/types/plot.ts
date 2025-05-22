@@ -31,14 +31,17 @@ export interface Plot {
   plantCount: number;
   leaseYears?: number | null;
   holes: number;
+  holeCount: number; // Compatibility field - maps to holes
   layoutStructure: RowData[];
   createdAt: string;
   updatedAt: string;
   plantedDate?: string;
+  dateEstablished?: Date; // Form compatibility - maps from plantedDate
   cropType?: string;
   status?: string;
+  healthStatus?: string; // Form compatibility - maps from status
 }
 
 export interface Harvest {
   // ... existing fields ...
-} 
+}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { CalendarIcon, Loader2, Settings } from "lucide-react"
+import { CalendarIcon, Loader2, Settings, RefreshCw, Calculator } from "lucide-react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 
@@ -59,6 +59,9 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
 
   // Track expanded rows for UI
   const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
+
+  // Add state to control whether auto-recalculation is enabled
+  const [autoRecalculate, setAutoRecalculate] = useState(true);
 
   // Define bulk settings state with defaults
   const [bulkSettings, setBulkSettings] = useState({
@@ -181,6 +184,34 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
     return layout;
   }
 
+  // Function to manually recalculate total holes from current layout
+  const recalculateTotalHoles = () => {
+    const currentLayout = form.getValues('layoutStructure') || [];
+    const totalHoles = currentLayout.reduce((sum, row) => sum + (row.holes?.length || 0), 0);
+    form.setValue('holeCount', totalHoles, { shouldValidate: true });
+    toast({
+      title: "Total Recalculated",
+      description: `Total holes updated to ${totalHoles}`,
+      duration: 2000,
+    });
+  };
+
+  // Function to redistribute holes evenly across all rows
+  const redistributeHoles = () => {
+    const rowCount = Number(form.watch('rowCount') ?? 0);
+    const holeCount = Number(form.watch('holeCount') ?? 0);
+    
+    if (rowCount > 0 && holeCount > 0) {
+      const layout = generateLayoutStructure(rowCount, holeCount, rowLength, rowSpacing);
+      form.setValue('layoutStructure', layout, { shouldValidate: false });
+      toast({
+        title: "Holes Redistributed",
+        description: `Redistributed ${holeCount} holes evenly across ${rowCount} rows`,
+        duration: 2000,
+      });
+    }
+  };
+
   // Log initial form values for debugging
   useEffect(() => {
     console.log("PlotForm initialized with values:", defaultValues)
@@ -202,22 +233,27 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
     }
   }, [farmId, form])
 
-  // Layout generation with row length and spacing
+  // Modified layout generation effect - only runs when auto-recalculate is enabled
   const rowCount = Number(form.watch('rowCount') ?? 0)
   const holeCount = Number(form.watch('holeCount') ?? 0)
   
   useEffect(() => {
-    if (rowCount > 0 && holeCount > 0) {
-      try {
-        const layout = generateLayoutStructure(rowCount, holeCount, rowLength, rowSpacing)
-        form.setValue('layoutStructure', layout, { shouldValidate: false })
-      } catch (error) {
-        console.error("Error generating layout:", error)
+    // Only auto-generate layout if auto-recalculate is enabled and we don't have an existing layout
+    if (autoRecalculate && rowCount > 0 && holeCount > 0) {
+      const currentLayout = form.getValues('layoutStructure') || [];
+      // Only regenerate if we don't have a layout or if the row count changed significantly
+      if (currentLayout.length === 0 || currentLayout.length !== rowCount) {
+        try {
+          const layout = generateLayoutStructure(rowCount, holeCount, rowLength, rowSpacing)
+          form.setValue('layoutStructure', layout, { shouldValidate: false })
+        } catch (error) {
+          console.error("Error generating layout:", error)
+        }
       }
-    } else {
+    } else if (rowCount === 0 || holeCount === 0) {
       form.setValue('layoutStructure', [], { shouldValidate: false })
     }
-  }, [rowCount, holeCount, rowLength, rowSpacing, form, bulkSettings])
+  }, [rowCount, holeCount, rowLength, rowSpacing, form, bulkSettings, autoRecalculate])
 
   const layoutStructure = form.watch('layoutStructure') ?? []
 
@@ -242,19 +278,88 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
     fetchFarms()
   }, [])
 
+  // Function to update a specific row's hole count without affecting others
+  const updateRowHoleCount = (rowNumber: number, newHoleCount: number) => {
+    const currentLayout = form.getValues('layoutStructure') || [];
+    
+    // Find the row and update its holes
+    const updatedLayout = currentLayout.map(row => {
+      if (row.rowNumber !== rowNumber) return row;
+      
+      const currentHoles = row.holes || [];
+      let newHoles = [...currentHoles];
+      
+      if (newHoleCount > currentHoles.length) {
+        // Add new holes
+        const defaultDate = form.getValues('dateEstablished') 
+          ? format(form.getValues('dateEstablished'), 'yyyy-MM-dd')
+          : bulkSettings.plantedDate || format(new Date(), 'yyyy-MM-dd');
+          
+        for (let h = currentHoles.length; h < newHoleCount; h++) {
+          newHoles.push({
+            holeNumber: h + 1,
+            status: 'PLANTED',
+            rowNumber: rowNumber,
+            plantHealth: 'Healthy',
+            mainPlantId: undefined,
+            activePlantIds: [],
+            targetSuckerCount: bulkSettings.targetSuckerCount,
+            currentSuckerCount: bulkSettings.currentSuckerCount,
+            plantedDate: defaultDate,
+            notes: bulkSettings.notes || '',
+            suckerIds: [],
+          });
+        }
+      } else if (newHoleCount < currentHoles.length) {
+        // Remove holes from the end
+        newHoles = newHoles.slice(0, newHoleCount);
+      }
+      
+      return { ...row, holes: newHoles };
+    });
+    
+    form.setValue('layoutStructure', updatedLayout, { shouldValidate: false });
+    
+    // Don't automatically update the total hole count - let user do it manually
+    toast({
+      title: "Row Updated",
+      description: `Row ${rowNumber} now has ${newHoleCount} holes. Use "Recalculate Total" to update the total count.`,
+      duration: 3000,
+    });
+  };
+
   async function onSubmit(values: PlotFormValues) {
     console.log("Form submitted with values:", values)
     setFormError(null)
     setIsSubmitting(true)
     
     try {
-      // Regenerate layout structure with current rowLength and rowSpacing
-      const updatedLayoutStructure = generateLayoutStructure(
-        Number(values.rowCount) || 0,
-        Number(values.holeCount) || 0,
-        rowLength,
-        rowSpacing
-      );
+      // Use the actual layout structure from the form, not regenerated
+      const actualLayoutStructure = values.layoutStructure || [];
+      
+      // Only regenerate if the user hasn't manually configured the layout
+      const shouldUseManualLayout = actualLayoutStructure.length > 0 && 
+        actualLayoutStructure.some(row => row.holes && row.holes.length > 0);
+      
+      let finalLayoutStructure;
+      if (shouldUseManualLayout) {
+        // Use the user's manual configuration
+        console.log("Using manual layout configuration");
+        finalLayoutStructure = actualLayoutStructure.map(row => ({
+          ...row,
+          length: rowLength || row.length || 0,
+          spacing: rowSpacing || row.spacing || 0,
+        }));
+      } else {
+        // Fallback to auto-generation only if no manual config exists
+        console.log("Using auto-generated layout");
+        finalLayoutStructure = generateLayoutStructure(
+          Number(values.rowCount) || 0,
+          Number(values.holeCount) || 0,
+          rowLength,
+          rowSpacing
+        );
+      }
       
       // Ensure all values are of the correct type and explicitly include dateEstablished
       const payload = {
@@ -264,14 +369,19 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
         holeCount: Number(values.holeCount),
         plantCount: Number(values.plantCount),
         farmId: String(values.farmId),
-        dateEstablished: values.dateEstablished, // Make sure we include the exact date object
-        layoutStructure: updatedLayoutStructure,
+        dateEstablished: values.dateEstablished,
+        layoutStructure: finalLayoutStructure, // Use the correct layout structure
       }
       
       console.log("Calling server action with payload:", {
         isEditing,
         plotId: initialData?.id,
-        dateEstablished: payload.dateEstablished, // Log date for debugging
+        dateEstablished: payload.dateEstablished,
+        layoutStructureSource: shouldUseManualLayout ? "manual" : "auto-generated",
+        actualRowCounts: finalLayoutStructure.map(row => ({ 
+          rowNumber: row.rowNumber, 
+          holeCount: row.holes?.length || 0 
+        })),
         payload
       })
       
@@ -570,9 +680,22 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
           )}
         />
 
-        {/* Row Settings - Grouped the related fields together */}
+        {/* Row Settings - Enhanced with manual control */}
         <div className="space-y-4">
-          <h3 className="font-medium text-sm text-gray-700">Row Configuration</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium text-sm text-gray-700">Row Configuration</h3>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-xs text-gray-600">
+                <input 
+                  type="checkbox" 
+                  checked={autoRecalculate}
+                  onChange={(e) => setAutoRecalculate(e.target.checked)}
+                  className="rounded"
+                />
+                Auto-recalculate layout
+              </label>
+            </div>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
@@ -594,11 +717,22 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
               name="holeCount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Hole Count</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="Number of holes" {...field} value={field.value ?? 0} />
-                  </FormControl>
-                  <FormDescription>Total number of holes in this plot</FormDescription>
+                  <FormLabel>Total Hole Count</FormLabel>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input type="number" placeholder="Number of holes" {...field} value={field.value ?? 0} />
+                    </FormControl>
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      variant="outline"
+                      onClick={recalculateTotalHoles}
+                      title="Recalculate total from current layout"
+                    >
+                      <Calculator className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <FormDescription>Total number of holes across all rows</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -645,20 +779,37 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
             </div>
           </div>
           
-          <FormField
-            control={form.control}
-            name="plantCount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Plant Count</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="Number of plants" {...field} value={field.value ?? 0} />
-                </FormControl>
-                <FormDescription>Total number of plants in this plot</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="flex gap-4">
+            <FormField
+              control={form.control}
+              name="plantCount"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>Plant Count</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="Number of plants" {...field} value={field.value ?? 0} />
+                  </FormControl>
+                  <FormDescription>Total number of plants in this plot</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Manual layout control buttons */}
+            <div className="flex flex-col gap-2 justify-end pb-6">
+              <Button 
+                type="button" 
+                size="sm" 
+                variant="outline"
+                onClick={redistributeHoles}
+                title="Redistribute holes evenly across all rows"
+                className="whitespace-nowrap"
+              >
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Redistribute
+              </Button>
+            </div>
+          </div>
         </div>
         
         {/* Bulk Hole Configuration */}
@@ -779,27 +930,68 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
           </div>
         )}
         
-        {/* Layout preview - Enhanced to show row length and spacing */}
+        {/* Enhanced Layout preview with independent row editing */}
         <div className="border rounded p-4 bg-gray-50 mt-4">
-          <h3 className="font-semibold mb-2">Layout Preview</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold">Layout Preview</h3>
+            <div className="flex gap-2">
+              <Button 
+                type="button" 
+                size="sm" 
+                variant="outline"
+                onClick={recalculateTotalHoles}
+                title="Update total hole count from current layout"
+              >
+                <Calculator className="h-4 w-4 mr-1" />
+                Recalculate Total
+              </Button>
+              <Button 
+                type="button" 
+                size="sm" 
+                variant="outline"
+                onClick={redistributeHoles}
+                title="Redistribute holes evenly across all rows"
+              >
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Redistribute
+              </Button>
+            </div>
+          </div>
+          
           {Array.isArray(layoutStructure) && layoutStructure.length > 0 ? (
             <ul className="text-xs max-h-80 overflow-auto">
               {layoutStructure.map((row, i) => (
                 <li key={i} className="mb-1 border-b pb-2">
                   <div className="flex items-center justify-between">
                     <span>
-                  Row {row.rowNumber}: {Array.isArray(row.holes) ? row.holes.length : 0} holes, 
-                  {row.length > 0 ? ` ${row.length}m length` : ' No length set'}, 
-                  {row.spacing > 0 ? ` ${row.spacing}m spacing` : ' No spacing set'}
+                      Row {row.rowNumber}: {Array.isArray(row.holes) ? row.holes.length : 0} holes, 
+                      {row.length > 0 ? ` ${row.length}m length` : ' No length set'}, 
+                      {row.spacing > 0 ? ` ${row.spacing}m spacing` : ' No spacing set'}
                     </span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setExpandedRows((prev) => ({ ...prev, [row.rowNumber]: !prev[row.rowNumber] }))}
-                    >
-                      {expandedRows[row.rowNumber] ? "Hide Holes" : "View Holes"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs flex items-center gap-1">
+                        Holes in Row:
+                        <Input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={row.holes.length}
+                          style={{ width: 60 }}
+                          onChange={e => {
+                            const newCount = Math.max(0, parseInt(e.target.value) || 0);
+                            updateRowHoleCount(row.rowNumber, newCount);
+                          }}
+                        />
+                      </label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setExpandedRows((prev) => ({ ...prev, [row.rowNumber]: !prev[row.rowNumber] }))}
+                      >
+                        {expandedRows[row.rowNumber] ? "Hide Holes" : "View Holes"}
+                      </Button>
+                    </div>
                   </div>
                   
                   {expandedRows[row.rowNumber] && (
@@ -954,7 +1146,15 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
               ))}
             </ul>
           ) : (
-            <span className="text-gray-400">No layout generated yet.</span>
+            <div className="text-center py-8 text-gray-400">
+              <p>No layout generated yet.</p>
+              <p className="text-xs mt-1">
+                {!autoRecalculate 
+                  ? "Enable auto-recalculate or use the redistribute button to generate layout"
+                  : "Set row count and hole count above to generate layout"
+                }
+              </p>
+            </div>
           )}
         </div>
 
@@ -988,6 +1188,7 @@ export function PlotForm({ initialData, farmId, onSuccess }: PlotFormProps) {
                 <p>Submission State: {isSubmitting ? "Submitting" : "Idle"}</p>
                 <p>Validation Errors: {Object.keys(form.formState.errors).length}</p>
                 <p>Row Length: {rowLength}m, Row Spacing: {rowSpacing}m</p>
+                <p>Auto-recalculate: {autoRecalculate ? "Enabled" : "Disabled"}</p>
                 <p>Date Established: {form.getValues("dateEstablished")?.toISOString()}</p>
                 <p>Bulk Settings: {JSON.stringify(bulkSettings)}</p>
               </div>

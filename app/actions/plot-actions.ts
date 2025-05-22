@@ -9,8 +9,11 @@ import { createGrowthRecord } from "@/db/repositories/growth-records-repository"
 
 export async function addPlot(values: PlotFormValues) {
   try {
-    // Create the plot in the database (with fallback to mock data)
+    console.log("addPlot called with values:", values)
+    
+    // Create the plot in the database first
     const newPlot = await plotRepository.createPlot(values)
+    console.log("Plot created in database:", newPlot)
 
     // Prepare a deep copy of the layout to update mainPlantId/activePlantIds/suckerIds
     let updatedLayout = Array.isArray(values.layoutStructure)
@@ -18,8 +21,8 @@ export async function addPlot(values: PlotFormValues) {
           ...row,
           holes: row.holes.map(hole => ({
             ...hole,
-            status: String(hole.status),
-            plantHealth: hole.plantHealth ? String(hole.plantHealth) : "Healthy",
+            status: (hole.status || "PLANTED") as 'PLANTED' | 'EMPTY' | 'HARVESTED',
+            plantHealth: (hole.plantHealth || "Healthy") as 'Healthy' | 'Diseased' | 'Pest-affected' | 'Damaged',
             suckerIds: Array.isArray(hole.suckerIds) ? hole.suckerIds : [],
             mainPlantId: hole.mainPlantId,
             activePlantIds: hole.activePlantIds ?? [],
@@ -29,19 +32,24 @@ export async function addPlot(values: PlotFormValues) {
             notes: hole.notes ?? '',
             rowNumber: hole.rowNumber,
             holeNumber: hole.holeNumber,
-          })) as any // type assertion for compatibility
-        })) as any // type assertion for compatibility
+          }))
+        }))
       : [];
 
     let totalPlants = 0;
 
     // After plot creation, create initial growth records for each PLANTED hole
-    if (Array.isArray(updatedLayout)) {
+    if (Array.isArray(updatedLayout) && updatedLayout.length > 0) {
+      console.log("Processing layout structure for growth records...")
+      
       for (const row of updatedLayout) {
         if (!Array.isArray(row.holes)) continue;
+        
         for (const hole of row.holes) {
           if (hole.status === "PLANTED") {
             try {
+              console.log(`Creating growth record for row ${row.rowNumber}, hole ${hole.holeNumber}`)
+              
               // Create main plant growth record
               const mainGrowthRecord = await createGrowthRecord({
                 farmId: Number(values.farmId),
@@ -54,10 +62,13 @@ export async function addPlot(values: PlotFormValues) {
                 notes: hole.notes || undefined,
                 metrics: {},
               })
+              
               hole.mainPlantId = mainGrowthRecord.id;
-              // Generate suckers
+              
+              // Generate suckers based on currentSuckerCount
               const suckerCount = hole.currentSuckerCount ?? 0;
               const suckerIds: number[] = [];
+              
               for (let i = 0; i < suckerCount; i++) {
                 const suckerGrowthRecord = await createGrowthRecord({
                   farmId: Number(values.farmId),
@@ -73,25 +84,39 @@ export async function addPlot(values: PlotFormValues) {
                 })
                 suckerIds.push(suckerGrowthRecord.id)
               }
+              
               hole.suckerIds = suckerIds
               hole.activePlantIds = [mainGrowthRecord.id, ...suckerIds]
               hole.currentSuckerCount = suckerIds.length
               totalPlants += 1 + suckerIds.length
+              
             } catch (err) {
               console.error(`Failed to create growth record for row ${row.rowNumber}, hole ${hole.holeNumber}:`, err)
-              // Continue with other holes
+              // Continue with other holes - don't fail the entire operation
             }
           }
         }
       }
+      
       // Update the plot's layoutStructure in the DB with mainPlantId/activePlantIds/suckerIds
-      await updatePlotLayout(newPlot.id, updatedLayout)
+      try {
+        await updatePlotLayout(newPlot.id, updatedLayout)
+        console.log("Layout structure updated successfully")
+      } catch (err) {
+        console.error("Failed to update layout structure:", err)
+      }
+      
       // Update plant_count in the plot
-      await plotRepository.updatePlot(newPlot.id, {
-        ...values,
-        plantCount: totalPlants,
-        layoutStructure: updatedLayout,
-      })
+      try {
+        await plotRepository.updatePlot(newPlot.id, {
+          ...values,
+          plantCount: totalPlants,
+          layoutStructure: updatedLayout,
+        })
+        console.log(`Plant count updated to ${totalPlants}`)
+      } catch (err) {
+        console.error("Failed to update plant count:", err)
+      }
     }
 
     // Revalidate the farm page to show the new plot
@@ -100,7 +125,7 @@ export async function addPlot(values: PlotFormValues) {
 
     return {
       success: true,
-      message: "Plot added successfully! Initial growth records created for planted holes (including suckers).",
+      message: `Plot added successfully! Initial growth records created for planted holes (including ${totalPlants} plants total).`,
       plot: newPlot,
     }
   } catch (error) {
@@ -114,8 +139,11 @@ export async function addPlot(values: PlotFormValues) {
 
 export async function updatePlot(plotId: number, values: PlotFormValues) {
   try {
-    // Update the plot in the database (with fallback to mock data)
+    console.log("updatePlot called with:", { plotId, values })
+    
+    // Update the plot in the database
     const updatedPlot = await plotRepository.updatePlot(plotId, values)
+    console.log("Plot updated successfully:", updatedPlot)
 
     // Revalidate the farm page to show the updated plot
     revalidatePath(`/farms/${values.farmId}`)
@@ -137,7 +165,7 @@ export async function updatePlot(plotId: number, values: PlotFormValues) {
 
 export async function deletePlot(plotId: number, farmId: number) {
   try {
-    // Delete the plot from the database (with fallback to mock data)
+    // Delete the plot from the database
     const success = await plotRepository.deletePlot(plotId, farmId)
 
     if (!success) {
@@ -164,7 +192,7 @@ export async function deletePlot(plotId: number, farmId: number) {
   }
 }
 
-// Add a new function to get all plots
+// Get all plots
 export async function getAllPlots() {
   try {
     const plots = await plotRepository.getAllPlots()
@@ -182,14 +210,14 @@ export async function getAllPlots() {
   }
 }
 
-// Fix getPlotById to return just the plot for internal use
+// Get plot by ID for internal use
 export async function getPlotById(plotId: number) {
-    const plot = await plotRepository.getPlotById(plotId)
+  const plot = await plotRepository.getPlotById(plotId)
   if (!plot) throw new Error("Plot not found")
   return plot
 }
 
-// Add a new function to get plots by farm ID
+// Get plots by farm ID
 export async function getPlotsByFarmId(farmId: number) {
   try {
     const plots = await plotRepository.getPlotsByFarmId(farmId)
@@ -220,7 +248,7 @@ export async function getPlotWithRows(plotId: number) {
   return await getPlotById(plotId)
 }
 
-// Fix addRowToPlot, updateRowInPlot, deleteRowFromPlot, addHoleToRow, updateHoleInRow to use the correct plot object
+// Row and hole management functions
 export async function addRowToPlot(plotId: number, row: RowData) {
   const plot = await getPlotById(plotId)
   const newLayout = [...plot.layoutStructure, row]

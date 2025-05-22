@@ -1,5 +1,5 @@
 import { db } from "../client"
-import { plots } from "../schema"
+import { plots, farms } from "../schema"
 import { eq } from "drizzle-orm"
 import type { Plot, RowData, HoleData } from "../../lib/types/plot"
 import type { PlotFormValues } from "@/lib/validations/form-schemas"
@@ -15,25 +15,13 @@ export async function getAllPlots(): Promise<Plot[]> {
 }
 
 export async function getPlotById(id: number): Promise<Plot | null> {
-  const result = await db.select().from(plots).where(eq(plots.id, id)).limit(1)
-  if (result.length === 0) return null
-  const dbPlot = result[0]
-  return {
-    id: typeof dbPlot.id === "number" ? dbPlot.id : Number(dbPlot.id),
-    name: dbPlot.name,
-    farmId: typeof dbPlot.farmId === "number" ? dbPlot.farmId : Number(dbPlot.farmId),
-    area: dbPlot.area ? Number(dbPlot.area) : 0,
-    soilType: dbPlot.soilType ?? "",
-    rowCount: dbPlot.rowCount ?? 0,
-    plantCount: dbPlot.plantCount ?? 0,
-    holes: dbPlot.holes ?? 0,
-    layoutStructure: Array.isArray(dbPlot.layoutStructure) ? dbPlot.layoutStructure : [],
-    createdAt: dbPlot.createdAt ? dbPlot.createdAt.toISOString?.() ?? dbPlot.createdAt : "",
-    updatedAt: dbPlot.updatedAt ? dbPlot.updatedAt.toISOString?.() ?? dbPlot.updatedAt : "",
-    plantedDate: dbPlot.plantedDate ? dbPlot.plantedDate.toISOString?.() ?? dbPlot.plantedDate : undefined,
-    cropType: dbPlot.cropType ?? undefined,
-    status: dbPlot.status ?? undefined,
-    leaseYears: dbPlot.leaseYears ?? null,
+  try {
+    const result = await db.select().from(plots).where(eq(plots.id, id)).limit(1)
+    if (result.length === 0) return null
+    return plotDbToModel(result[0])
+  } catch (error) {
+    console.error(`Error fetching plot with id ${id}:`, error)
+    return null
   }
 }
 
@@ -49,25 +37,31 @@ export async function getPlotsByFarmId(farmId: number): Promise<Plot[]> {
 
 export async function createPlot(values: PlotFormValues): Promise<Plot> {
   try {
+    console.log("Creating plot with values:", values)
+    
     const plotData = {
       farmId: Number.parseInt(values.farmId),
       name: values.name,
       area: values.area.toString(),
-      soilType: values.soilType,
-      plantedDate: (values as any).plantedDate ?? values.dateEstablished,
-      healthStatus: values.healthStatus,
-      holes: (values as any).holes ?? 0,
+      soilType: values.soilType || null,
+      plantedDate: values.dateEstablished, // Use dateEstablished as plantedDate
+      status: values.healthStatus || "ACTIVE",
       rowCount: values.rowCount ?? 0,
-      holeCount: values.holeCount ?? 0,
+      holes: values.holeCount ?? 0, // Map holeCount to holes field
       plantCount: values.plantCount ?? 0,
       layoutStructure: values.layoutStructure ?? null,
-      leaseYears: values.leaseYears ?? null,
+      cropType: "BANANA", // Default crop type
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }
 
+    console.log("Inserting plot data:", plotData)
+    
     const result = await db.insert(plots).values(plotData).returning()
+    console.log("Plot created successfully:", result[0])
 
-    // Update the farm's plot count
-    await updateFarmPlotCount(plotData.farmId)
+    // Note: Removed plot count update since the column doesn't exist
+    // If you need to track plot counts, you'll need to add the column to the farms table first
 
     return plotDbToModel(result[0])
   } catch (error) {
@@ -78,22 +72,26 @@ export async function createPlot(values: PlotFormValues): Promise<Plot> {
 
 export async function updatePlot(id: number, values: PlotFormValues): Promise<Plot> {
   try {
+    console.log("Updating plot with id:", id, "values:", values)
+    
     const plotData = {
       name: values.name,
       area: values.area.toString(),
-      soilType: values.soilType,
-      plantedDate: (values as any).plantedDate ?? values.dateEstablished,
-      healthStatus: values.healthStatus,
-      holes: (values as any).holes ?? 0,
+      soilType: values.soilType || null,
+      plantedDate: values.dateEstablished, // Use dateEstablished as plantedDate
+      status: values.healthStatus || "ACTIVE",
       rowCount: values.rowCount ?? 0,
-      holeCount: values.holeCount ?? 0,
+      holes: values.holeCount ?? 0, // Map holeCount to holes field
       plantCount: values.plantCount ?? 0,
       layoutStructure: values.layoutStructure ?? null,
-      leaseYears: values.leaseYears ?? null,
       updatedAt: new Date(),
     }
 
     const result = await db.update(plots).set(plotData).where(eq(plots.id, id)).returning()
+
+    if (result.length === 0) {
+      throw new Error(`Plot with id ${id} not found`)
+    }
 
     return plotDbToModel(result[0])
   } catch (error) {
@@ -104,17 +102,7 @@ export async function updatePlot(id: number, values: PlotFormValues): Promise<Pl
 
 export async function deletePlot(id: number, farmId: number): Promise<boolean> {
   try {
-    // Get the farm ID before deleting the plot
-    const plotResult = await db.select({ farmId: plots.farmId }).from(plots).where(eq(plots.id, id)).limit(1)
-    const farmId = plotResult[0]?.farmId
-
     const result = await db.delete(plots).where(eq(plots.id, id)).returning({ id: plots.id })
-
-    // Update the farm's plot count if the plot was deleted and we have the farm ID
-    if (result.length > 0 && farmId) {
-      await updateFarmPlotCount(farmId)
-    }
-
     return result.length > 0
   } catch (error) {
     console.error(`Error deleting plot with id ${id}:`, error)
@@ -123,21 +111,14 @@ export async function deletePlot(id: number, farmId: number): Promise<boolean> {
 }
 
 export async function updatePlotLayout(id: number, layout: RowData[]): Promise<void> {
-  await db.update(plots).set({ layoutStructure: layout }).where(eq(plots.id, id))
-}
-
-// Helper function to update a farm's plot count
-async function updateFarmPlotCount(farmId: number): Promise<void> {
   try {
-    // Count the plots for this farm
-    const result = await db.select().from(plots).where(eq(plots.farmId, farmId))
-    const plotCount = result.length
-
-    // Update the farm's plot count
-    await db.execute(`UPDATE farms SET plot_count = ${plotCount}, updated_at = NOW() WHERE id = ${farmId}`)
+    await db.update(plots).set({ 
+      layoutStructure: layout,
+      updatedAt: new Date()
+    }).where(eq(plots.id, id))
   } catch (error) {
-    console.error(`Error updating plot count for farm with id ${farmId}:`, error)
-    // Don't throw here, as this is a secondary operation
+    console.error(`Error updating plot layout for id ${id}:`, error)
+    throw new Error(`Failed to update plot layout for id ${id}`)
   }
 }
 
@@ -145,19 +126,22 @@ async function updateFarmPlotCount(farmId: number): Promise<void> {
 function plotDbToModel(dbPlot: any): Plot {
   return {
     id: typeof dbPlot.id === "number" ? dbPlot.id : Number(dbPlot.id),
-    name: dbPlot.name,
+    name: dbPlot.name || "",
     farmId: typeof dbPlot.farmId === "number" ? dbPlot.farmId : Number(dbPlot.farmId),
     area: dbPlot.area ? Number(dbPlot.area) : 0,
     soilType: dbPlot.soilType ?? "",
     rowCount: dbPlot.rowCount ?? 0,
     plantCount: dbPlot.plantCount ?? 0,
     holes: dbPlot.holes ?? 0,
+    holeCount: dbPlot.holes ?? 0, // Map holes to holeCount for compatibility
     layoutStructure: Array.isArray(dbPlot.layoutStructure) ? dbPlot.layoutStructure : [],
-    createdAt: dbPlot.createdAt ? dbPlot.createdAt.toISOString?.() ?? dbPlot.createdAt : "",
-    updatedAt: dbPlot.updatedAt ? dbPlot.updatedAt.toISOString?.() ?? dbPlot.updatedAt : "",
-    plantedDate: dbPlot.plantedDate ? dbPlot.plantedDate.toISOString?.() ?? dbPlot.plantedDate : undefined,
-    cropType: dbPlot.cropType ?? undefined,
-    status: dbPlot.status ?? undefined,
+    createdAt: dbPlot.createdAt ? (typeof dbPlot.createdAt === 'string' ? dbPlot.createdAt : dbPlot.createdAt.toISOString()) : new Date().toISOString(),
+    updatedAt: dbPlot.updatedAt ? (typeof dbPlot.updatedAt === 'string' ? dbPlot.updatedAt : dbPlot.updatedAt.toISOString()) : new Date().toISOString(),
+    plantedDate: dbPlot.plantedDate ? (typeof dbPlot.plantedDate === 'string' ? dbPlot.plantedDate : dbPlot.plantedDate.toISOString()) : undefined,
+    dateEstablished: dbPlot.plantedDate ? (typeof dbPlot.plantedDate === 'string' ? new Date(dbPlot.plantedDate) : dbPlot.plantedDate) : undefined,
+    cropType: dbPlot.cropType ?? "BANANA",
+    status: dbPlot.status ?? "ACTIVE",
+    healthStatus: dbPlot.status ?? "Good", // Map status to healthStatus for form compatibility
     leaseYears: dbPlot.leaseYears ?? null,
   }
 }
@@ -192,16 +176,19 @@ export async function deleteRowFromPlot(plotId: number, rowNumber: number) {
 export async function addHoleToRow(plotId: number, rowNumber: number, hole: HoleData) {
   const plot = await getPlotById(plotId);
   if (!plot) throw new Error("Plot not found");
+  
   // Ensure enhanced fields are initialized
   const enhancedHole: HoleData = {
     ...hole,
     mainPlantId: hole.mainPlantId ?? undefined,
     activePlantIds: hole.activePlantIds ?? (hole.mainPlantId ? [hole.mainPlantId] : []),
-    targetSuckerCount: hole.targetSuckerCount ?? 3, // default to 3 if not set
+    targetSuckerCount: hole.targetSuckerCount ?? 3,
     currentSuckerCount: hole.currentSuckerCount ?? 0,
     plantedDate: hole.plantedDate ?? undefined,
     notes: hole.notes ?? '',
+    suckerIds: hole.suckerIds ?? [],
   };
+  
   const newLayout = plot.layoutStructure.map((row) =>
     row.rowNumber === rowNumber ? { ...row, holes: [...row.holes, enhancedHole] } : row
   );
@@ -212,6 +199,7 @@ export async function addHoleToRow(plotId: number, rowNumber: number, hole: Hole
 export async function updateHoleInRow(plotId: number, rowNumber: number, holeNumber: number, data: Partial<HoleData>) {
   const plot = await getPlotById(plotId);
   if (!plot) throw new Error("Plot not found");
+  
   const newLayout = plot.layoutStructure.map((row) => {
     if (row.rowNumber !== rowNumber) return row;
     return {
@@ -227,6 +215,7 @@ export async function updateHoleInRow(plotId: number, rowNumber: number, holeNum
               currentSuckerCount: data.currentSuckerCount ?? hole.currentSuckerCount ?? 0,
               plantedDate: data.plantedDate ?? hole.plantedDate,
               notes: data.notes ?? hole.notes ?? '',
+              suckerIds: data.suckerIds ?? hole.suckerIds ?? [],
             }
           : hole
       ),
