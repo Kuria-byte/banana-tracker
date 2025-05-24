@@ -4,7 +4,6 @@ export default function Head() {
       <title>Farm Manager by Kamili</title>
       <meta name="description" content="Track and manage farms efficiently with Kamili's farm management solution" />
       <meta name="theme-color" content="#10b981" />
-      <link rel="manifest" href="/manifest.json" />
       <link rel="icon" href="/icon-192x192.png" />
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <meta name="apple-mobile-web-app-status-bar-style" content="default" />

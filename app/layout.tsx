@@ -19,7 +19,8 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Farm Manager by Kamili",
   description: "Track and manage farms efficiently with Kamili's farm management solution",
-  generator: 'Ian Kuria'
+  generator: 'Ian Kuria',
+  manifest: '/manifest.json',
 }
 
 export default function RootLayout({

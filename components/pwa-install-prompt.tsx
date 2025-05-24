@@ -37,9 +37,9 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ className })
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className={`bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center ${className}`}
         role="dialog" aria-modal="true" aria-labelledby="pwa-install-title">
-        <img src="/icon-192x192.png" alt="Banana Tracker logo" className="mx-auto mb-4 w-16 h-16 rounded-full border border-green-300" />
+        <img src="/android/android-launchericon-48-48.png" alt="Banana Tracker logo" className="mx-auto mb-4 w-16 h-16 rounded-full border border-green-300" />
         <h2 id="pwa-install-title" className="text-lg font-bold text-green-600 mb-2">Install Banana Tracker</h2>
-        <p className="text-gray-700 mb-4">Add Banana Tracker to your home screen for quick access and offline use.</p>
+        <p className="text-gray-700 mb-4">Add Banana Tracker to your phone for quick access and offline use.</p>
         <div className="flex gap-2 justify-center">
           <button
             onClick={handleInstall}
