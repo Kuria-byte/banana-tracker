@@ -14,6 +14,28 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   return userDbToModel(result[0]);
 }
 
+export async function createUser({ stackAuthId, email, name, image, avatar, role, phone }: {
+  stackAuthId: string;
+  email: string;
+  name: string;
+  image?: string;
+  avatar?: string;
+  role?: string;
+  phone?: string;
+}): Promise<User> {
+  const [created] = await db.insert(users).values({
+    stackAuthId,
+    email,
+    name,
+    image: image || null,
+    avatar: avatar || null,
+    role: role || "MANAGER",
+    phone: phone || null,
+    // Other fields can be added as needed
+  }).returning();
+  return userDbToModel(created);
+}
+
 function userDbToModel(dbUser: any): User {
   return {
     id: dbUser.id?.toString() ?? "",

@@ -12,7 +12,7 @@ import { EnhancedGreeting } from "@/components/dashboard/enhanced-greeting"
 import { KnowledgeLinkCard } from "@/components/dashboard/knowledge-link-card"
 import { getAllFarms } from "@/db/repositories/farm-repository";
 import { getAllTasks } from "@/db/repositories/task-repository"
-import { getAllUsers } from "@/db/repositories/user-repository";
+import { getAllUsers, getUserByEmail, createUser } from "@/db/repositories/user-repository";
 import { getAllHarvests } from "@/db/repositories/harvest-repository";
 import { getFarmsHealthStatusFromPlots, getFarmsWithUnresolvedIssuesFromPlots, getFarmsMissingRecentInspection, getPlotsWithPoorWatering } from "@/app/actions/farm-health-actions"
 import Link from "next/link"
@@ -40,6 +40,21 @@ export default async function Dashboard() {
   const user = await stackServerApp.getUser();
   if (!user) {
     redirect("/handler/sign-up"); 
+  }
+
+  // Ensure user exists in our DB
+  const userEmail = user.primaryEmail || "";
+  let dbUser = await getUserByEmail(userEmail);
+  if (!dbUser) {
+    dbUser = await createUser({
+      stackAuthId: user.id,
+      email: userEmail,
+      name: user.displayName || "",
+      image: user.profileImageUrl || undefined,
+      avatar: user.profileImageUrl || undefined,
+      role: "MANAGER",
+      // phone: not available from Stack Auth user
+    });
   }
 
   const farms = await getAllFarms();

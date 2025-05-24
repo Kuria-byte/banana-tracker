@@ -9,15 +9,17 @@ import { MobileNav } from "@/components/mobile-nav"
 import { Header } from "@/components/header"
 import { QuickActions } from "@/components/quick-actions"
 import { AuthProvider } from "@/lib/auth/auth-context"
-import { ToastProvider } from "@/components/ui/toast";
-
+import { ToastProvider } from "@/components/ui/toast"
+import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
+import { RegisterServiceWorker } from "@/components/register-service-worker"
+import Head from "next/head"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Farm Manager by Kamili",
   description: "Track and manage farms efficiently with Kamili's farm management solution",
-    generator: 'Ian Kuria'
+  generator: 'Ian Kuria'
 }
 
 export default function RootLayout({
@@ -35,6 +37,8 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <PWAInstallPrompt />
+            <RegisterServiceWorker />
             <div className="flex min-h-screen flex-col">
               <Header />
               <main className="flex-1 pb-16 md:pb-0">{children}</main>
