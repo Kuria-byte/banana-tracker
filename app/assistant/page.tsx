@@ -4,7 +4,8 @@ import { Metadata } from 'next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getUserConversation } from '@/app/actions/ai-assistant-actions';
 import { stackServerApp } from "@/stack";
-import { getUserByEmail } from '@/app/actions/team-actions';
+import { getUserByEmail } from '@/db/repositories/user-repository';
+import { getConversationHistory } from '@/db/repositories/conversation-repository';
 import { Badge } from "@/components/ui/badge";
 import AssistantChat from '@/components/assistant/assistant-chat';
 import AssistantHelp from '@/components/assistant/assistant-help';
@@ -16,29 +17,18 @@ export const metadata: Metadata = {
 };
 
 export default async function AssistantPage() {
-  // Get the authenticated user from Stack Auth
+  // Get the current user from Stack Auth
   const user = await stackServerApp.getUser();
-  const userEmail = typeof user?.primaryEmail === 'string' ? user.primaryEmail : undefined;
-
-  let userId = 0;
-  let initialMessages: any[] = [];
-
-  if (userEmail) {
-    const dbUser = await getUserByEmail(userEmail);
-    userId = typeof dbUser?.id === 'number' ? dbUser.id : Number(dbUser?.id) || 0;
-    if (userId) {
-      try {
-        initialMessages = await getUserConversation(userId);
-      } catch (e) {
-        initialMessages = [];
-      }
-    }
+  if (!user || !user.primaryEmail) {
+    return <div className="p-8 text-center text-red-600">You must be signed in to use the assistant.</div>;
   }
-
-  // Graceful fallback for new users or missing conversation
-  if (!Array.isArray(initialMessages)) {
-    initialMessages = [];
+  // Look up DB user by email
+  const dbUser = await getUserByEmail(user.primaryEmail);
+  if (!dbUser) {
+    return <div className="p-8 text-center text-red-600">No database user found for your account.</div>;
   }
+  // Fetch initial conversation history (optional)
+  const initialMessages = await getConversationHistory(dbUser.id, 20);
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-5xl">
@@ -77,7 +67,7 @@ export default async function AssistantPage() {
         <TabsContent value="chat" className="focus-visible:outline-none focus-visible:ring-0">
           <div className="bg-gradient-to-br from-white to-green-50 rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <Suspense fallback={<ChatSkeleton />}>
-              <AssistantChat initialMessages={initialMessages} userId={userId} />
+              <AssistantChat initialMessages={initialMessages} userId={dbUser.id} />
             </Suspense>
           </div>
         </TabsContent>

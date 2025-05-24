@@ -7,9 +7,16 @@ export type UserRole = "Farm Manager" | "Farm Consultant" | "Team Leader" | "Far
 export interface User {
   id: string
   name: string
-  role: UserRole
+  role: UserRole | string
   email: string
   phone: string
+  avatar?: string
+  status?: string
+  salary?: number
+  startDate?: string
+  location?: string
+  responsibilities?: string[]
+  skills?: string[]
 }
 
 // Farm interface
