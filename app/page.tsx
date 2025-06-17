@@ -137,9 +137,9 @@ export default async function Dashboard() {
         />
         <StatsCard
           title="Health Concerns"
-          value={Object.keys(farmsWithUnresolvedIssues).length}
+          value={farmsWithUnresolvedIssues.length}
           icon={<AlertTriangle className="h-4 w-4 text-muted-foreground" />}
-          description="Farms needing attention"
+          description="Issues needing attention"
         />
       </div>
 

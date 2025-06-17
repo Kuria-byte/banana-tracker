@@ -34,7 +34,7 @@ export function FarmHealthStatus({ healthStatuses }: FarmHealthStatusProps) {
               </TooltipTrigger>
               <TooltipContent>
                 <p className="max-w-xs">
-                  Farm health is determined by soil quality, plant condition, and pest presence. Good: Optimal
+                  Overall Farm health is determined by monthly inspection records - which include -  plant health, pest presence, and more. Good: Optimal
                   conditions. Average: Minor issues. Poor: Requires immediate attention.
                 </p>
               </TooltipContent>

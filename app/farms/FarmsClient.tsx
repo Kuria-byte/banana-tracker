@@ -70,7 +70,7 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
   })
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [farmHealth, setFarmHealth] = useState<{ [farmId: string]: string }>({})
-  const [attentionFarms, setAttentionFarms] = useState<string[]>([])
+  const [attentionIssues, setAttentionIssues] = useState<any[]>([])
   const [healthStats, setHealthStats] = useState({
     good: 0,
     average: 0,
@@ -96,7 +96,7 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
       setHealthStats({ good, average, poor, notAssessed, total: healthResults.length })
 
       const unresolved = await getFarmsWithUnresolvedIssuesFromPlots()
-      setAttentionFarms(Object.keys(unresolved))
+      setAttentionIssues(unresolved)
     }
     fetchHealthAndIssues()
   }, [])
@@ -306,31 +306,31 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
                 <CardTitle className="text-sm font-medium">Attention Required</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">{healthStats.poor}</div>
+                <div className="text-2xl font-bold text-red-600">{attentionIssues.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  Farms requiring immediate attention
+                  Issues requiring immediate attention
                 </p>
-                
-                {healthStats.poor > 0 ? (
+                {attentionIssues.length > 0 ? (
                   <div className="mt-4 space-y-3">
-                    {farms
-                      .filter(farm => attentionFarms.includes(farm.id))
-                      .slice(0, 3)
-                      .map(farm => (
-                        <div key={farm.id} className="flex items-center justify-between gap-2 p-2 border rounded-md">
-                          <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-4 w-4 text-red-500" />
-                            <span className="font-medium">{farm.name}</span>
-                          </div>
+                    {attentionIssues.slice(0, 3).map((issue, idx) => (
+                      <div key={idx} className="flex flex-col gap-1 p-2 border rounded-md">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-red-500" />
+                          <span className="font-medium">{issue.farmName}</span>
                           <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200">
-                            Poor
+                            {issue.status}
                           </Badge>
                         </div>
+                        <div className="text-xs text-muted-foreground pl-6">
+                          <span className="font-semibold">Issue:</span> {issue.issueType} <br />
+                          <span className="font-semibold">Plot:</span> {issue.plotName}
+                          {issue.description ? <><br /><span className="font-semibold">Description:</span> {issue.description}</> : null}
+                        </div>
+                      </div>
                     ))}
-                    
-                    {healthStats.poor > 3 && (
+                    {attentionIssues.length > 3 && (
                       <div className="text-center text-xs text-muted-foreground">
-                        +{healthStats.poor - 3} more with health issues
+                        +{attentionIssues.length - 3} more issues
                       </div>
                     )}
                   </div>

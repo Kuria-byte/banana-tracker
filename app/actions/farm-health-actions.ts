@@ -397,20 +397,71 @@ export async function getFarmsWithUnresolvedIssuesFromPlots() {
       eq(inspectionIssues.status, "In Progress")
     )
   )
-  // Group by farmId (via inspection -> plot -> farm)
-  const farmIssues: Record<number, any[]> = {}
+  const results: Array<{
+    farmId: number,
+    farmName: string,
+    plotId: number,
+    plotName: string,
+    issueType: string,
+    description: string,
+    status: string,
+    inspectionId?: number | null,
+    createdAt?: Date,
+    // add more fields as needed
+  }> = []
   for (const issue of issues) {
-    // Get the inspection and plot to find the farmId
-    const [inspection] = await db.select().from(farmInspections).where(eq(farmInspections.id, issue.inspectionId))
-    if (inspection) {
-      const [plot] = await db.select().from(plots).where(eq(plots.id, inspection.plotId))
+    let farmId: number | null = null
+    let farmName = ''
+    let plotId: number | null = null
+    let plotName = ''
+    // Find plot and farm
+    if (issue.inspectionId) {
+      const [inspection] = await db.select().from(farmInspections).where(eq(farmInspections.id, issue.inspectionId))
+      if (inspection) {
+        plotId = inspection.plotId
+        if (plotId != null) {
+          const [plot] = await db.select().from(plots).where(eq(plots.id, plotId))
+          if (plot) {
+            plotName = plot.name
+            farmId = plot.farmId
+            if (farmId != null) {
+              const [farm] = await db.select().from(farms).where(eq(farms.id, farmId))
+              if (farm) {
+                farmName = farm.name
+              }
+            }
+          }
+        }
+      }
+    } else if (issue.plotId) {
+      plotId = issue.plotId
+      const [plot] = await db.select().from(plots).where(eq(plots.id, plotId))
       if (plot) {
-        if (!farmIssues[plot.farmId]) farmIssues[plot.farmId] = []
-        farmIssues[plot.farmId].push({ ...issue, inspection, plot })
+        plotName = plot.name
+        farmId = plot.farmId
+        if (farmId != null) {
+          const [farm] = await db.select().from(farms).where(eq(farms.id, farmId))
+          if (farm) {
+            farmName = farm.name
+          }
+        }
       }
     }
+    if (farmId != null && plotId != null) {
+      results.push({
+        farmId,
+        farmName,
+        plotId,
+        plotName,
+        issueType: issue.issueType,
+        description: issue.description,
+        status: issue.status,
+        inspectionId: issue.inspectionId,
+        createdAt: issue.createdAt,
+      })
+    }
   }
-  return farmIssues
+  return results
 }
 
 // Get all issues for a farm by farmId

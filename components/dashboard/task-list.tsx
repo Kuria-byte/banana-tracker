@@ -29,7 +29,7 @@ export function TaskList({ tasks, limit }: TaskListProps) {
                     <TaskStatusBadge status={task.status} />
                   </div>
                   <div className="flex items-center text-xs text-muted-foreground">
-                    <span>Assigned to {getUserById(task.assignedToId)?.name}</span>
+                    <span>Assigned to {task.assigneeName || "Unassigned"}</span>
                     <span className="mx-2">•</span>
                     <span>Due {formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}</span>
                   </div>
