@@ -1,12 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { TaskCard } from "@/components/tasks/task-card"
 import { TaskFilter } from "@/components/tasks/task-filter"
 import { Plus, Calendar, CheckCircle, Clock, AlertCircle } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TaskFormModal } from "@/components/modals/task-form-modal"
+import { getAllFarms } from "@/app/actions/farm-actions"
+import { getAllPlots } from "@/app/actions/plot-actions"
+import { updateTaskStatus } from "@/app/actions/task-actions"
 
 // Add custom scrollbar hiding styles
 const scrollbarHideStyles = `
@@ -22,12 +25,36 @@ const scrollbarHideStyles = `
 export default function TasksClient({ tasks }: { tasks: Task[] }) {
   const [filteredTasks, setFilteredTasks] = useState(tasks)
   const [localTasks, setLocalTasks] = useState(tasks)
+  const [farms, setFarms] = useState<{ id: string; name: string }[]>([])
+  const [plots, setPlots] = useState<{ id: string; name: string; farmId: string }[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true)
+      try {
+        const farmsRes = await getAllFarms()
+        setFarms(farmsRes.farms || [])
+        const plotsRes = await getAllPlots()
+        setPlots(plotsRes.plots || [])
+      } catch (e) {
+        setError("Failed to load farms or plots")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   const handleFilterChange = (filters: {
     search: string
     status: string
     priority: string
     type: string
+    year: string
+    farmId: string
+    plotId: string
   }) => {
     let result = [...localTasks]
 
@@ -52,15 +79,44 @@ export default function TasksClient({ tasks }: { tasks: Task[] }) {
       result = result.filter((task) => task.type === filters.type)
     }
 
+    if (filters.year && filters.year !== "all") {
+      result = result.filter((task) => {
+        if (!task.dueDate) return false
+        const year = new Date(task.dueDate).getFullYear().toString()
+        return year === filters.year
+      })
+    }
+
+    if (filters.farmId && filters.farmId !== "all") {
+      result = result.filter((task) => task.farmId === filters.farmId)
+    }
+
+    if (filters.plotId && filters.plotId !== "all") {
+      result = result.filter((task) => task.plotId === filters.plotId)
+    }
+
     setFilteredTasks(result)
   }
 
-  const handleTaskStatusChange = (taskId: string, newStatus: string) => {
-    // In a real app, this would call a server action to update the task status
-    // For now, we'll just update the local state
-    const updatedTasks = localTasks.map((task) => (task.id === taskId ? { ...task, status: newStatus as any } : task))
-    setLocalTasks(updatedTasks)
-    setFilteredTasks(updatedTasks)
+  const handleTaskStatusChange = async (taskId: string, newStatus: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await updateTaskStatus(taskId, newStatus)
+      if (res.success) {
+        const updatedTasks = localTasks.map((task) =>
+          task.id === taskId ? { ...task, status: newStatus as any } : task
+        )
+        setLocalTasks(updatedTasks)
+        setFilteredTasks(updatedTasks)
+      } else {
+        setError(res.error || "Failed to update task status")
+      }
+    } catch (e) {
+      setError("Failed to update task status")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const pendingTasks = filteredTasks.filter((task) => task.status === "Pending")
@@ -70,6 +126,8 @@ export default function TasksClient({ tasks }: { tasks: Task[] }) {
   return (
     <div className="container px-4 py-6 md:px-6 md:py-8">
       <style jsx global>{scrollbarHideStyles}</style>
+      {loading && <div className="mb-4 text-blue-600">Loading...</div>}
+      {error && <div className="mb-4 text-red-600">{error}</div>}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
@@ -88,7 +146,7 @@ export default function TasksClient({ tasks }: { tasks: Task[] }) {
       </div>
 
       <div className="mb-6">
-        <TaskFilter onFilterChange={handleFilterChange} />
+        <TaskFilter onFilterChange={handleFilterChange} farms={farms} plots={plots} />
       </div>
 
       <Tabs defaultValue="pending" className="mt-6">

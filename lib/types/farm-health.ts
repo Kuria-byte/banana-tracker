@@ -79,4 +79,5 @@ export interface InspectionIssue {
   status?: string
   createdAt: string
   resolvedAt?: string
+  mitigationNotes?: string
 }

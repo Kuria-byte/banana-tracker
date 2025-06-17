@@ -15,34 +15,65 @@ interface TaskFilterProps {
     status: string
     priority: string
     type: string
+    year: string
+    farmId: string
+    plotId: string
   }) => void
+  farms: { id: string; name: string }[]
+  plots: { id: string; name: string; farmId: string }[]
 }
 
-export function TaskFilter({ onFilterChange }: TaskFilterProps) {
+export function TaskFilter({ onFilterChange, farms, plots }: TaskFilterProps) {
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState("")
   const [priority, setPriority] = useState("")
   const [type, setType] = useState("")
+  const [year, setYear] = useState("")
+  const [farmId, setFarmId] = useState("")
+  const [plotId, setPlotId] = useState("")
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+
+  // Filter plots by selected farm
+  const filteredPlots = farmId ? plots.filter((p) => p.farmId === farmId) : plots
+
+  // Fix year options: generate from current year to 5 years back
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: 6 }, (_, i) => (currentYear - i).toString())
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value)
-    onFilterChange({ search: e.target.value, status, priority, type })
+    onFilterChange({ search: e.target.value, status, priority, type, year, farmId, plotId })
   }
 
   const handleStatusChange = (value: string) => {
     setStatus(value)
-    onFilterChange({ search, status: value, priority, type })
+    onFilterChange({ search, status: value, priority, type, year, farmId, plotId })
   }
 
   const handlePriorityChange = (value: string) => {
     setPriority(value)
-    onFilterChange({ search, status, priority: value, type })
+    onFilterChange({ search, status, priority: value, type, year, farmId, plotId })
   }
 
   const handleTypeChange = (value: string) => {
     setType(value)
-    onFilterChange({ search, status, priority, type: value })
+    onFilterChange({ search, status, priority, type: value, year, farmId, plotId })
+  }
+
+  const handleYearChange = (value: string) => {
+    setYear(value)
+    onFilterChange({ search, status, priority, type, year: value, farmId, plotId })
+  }
+
+  const handleFarmChange = (value: string) => {
+    setFarmId(value)
+    setPlotId("") // Reset plot when farm changes
+    onFilterChange({ search, status, priority, type, year, farmId: value, plotId: "" })
+  }
+
+  const handlePlotChange = (value: string) => {
+    setPlotId(value)
+    onFilterChange({ search, status, priority, type, year, farmId, plotId: value })
   }
 
   const handleReset = () => {
@@ -50,7 +81,10 @@ export function TaskFilter({ onFilterChange }: TaskFilterProps) {
     setStatus("")
     setPriority("")
     setType("")
-    onFilterChange({ search: "", status: "", priority: "", type: "" })
+    setYear("")
+    setFarmId("")
+    setPlotId("")
+    onFilterChange({ search: "", status: "", priority: "", type: "", year: "", farmId: "", plotId: "" })
     setIsFilterOpen(false)
   }
 
@@ -72,6 +106,68 @@ export function TaskFilter({ onFilterChange }: TaskFilterProps) {
             <SheetTitle>Filter Tasks</SheetTitle>
           </SheetHeader>
           <div className="grid gap-4 py-4">
+       
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Farm</label>
+              <Select value={farmId} onValueChange={handleFarmChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All farms" />
+                </SelectTrigger>
+                <SelectContent side="bottom">
+                  <SelectItem value="all">All farms</SelectItem>
+                  {farms.map((farm) => (
+                    <SelectItem key={farm.id} value={farm.id}>{farm.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* <div className="space-y-2">
+              <label className="text-sm font-medium">Priority</label>
+              <Select value={priority} onValueChange={handlePriorityChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All priorities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All priorities</SelectItem>
+                  <SelectItem value="Low">Low</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="High">High</SelectItem>
+                  <SelectItem value="Urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div> */}
+            {/* <div className="space-y-2">
+              <label className="text-sm font-medium">Type</label>
+              <Select value={type} onValueChange={handleTypeChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All types</SelectItem>
+                  <SelectItem value="Planting">Planting</SelectItem>
+                  <SelectItem value="Harvesting">Harvesting</SelectItem>
+                  <SelectItem value="Maintenance">Maintenance</SelectItem>
+                  <SelectItem value="Input Application">Input Application</SelectItem>
+                  <SelectItem value="Inspection">Inspection</SelectItem>
+                </SelectContent>
+              </Select>
+            </div> */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Year</label>
+              <Select value={year} onValueChange={handleYearChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All years" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All years</SelectItem>
+                  {years.map((y) => (
+                    <SelectItem key={y} value={y}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Status</label>
               <Select value={status} onValueChange={handleStatusChange}>
@@ -87,37 +183,21 @@ export function TaskFilter({ onFilterChange }: TaskFilterProps) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Priority</label>
-              <Select value={priority} onValueChange={handlePriorityChange}>
+           
+            {/* <div className="space-y-2">
+              <label className="text-sm font-medium">Plot</label>
+              <Select value={plotId} onValueChange={handlePlotChange} disabled={!farmId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All priorities" />
+                  <SelectValue placeholder="All plots" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All priorities</SelectItem>
-                  <SelectItem value="Low">Low</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="High">High</SelectItem>
-                  <SelectItem value="Urgent">Urgent</SelectItem>
+                  <SelectItem value="all">All plots</SelectItem>
+                  {filteredPlots.map((plot) => (
+                    <SelectItem key={plot.id} value={plot.id}>{plot.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Type</label>
-              <Select value={type} onValueChange={handleTypeChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  <SelectItem value="Planting">Planting</SelectItem>
-                  <SelectItem value="Harvesting">Harvesting</SelectItem>
-                  <SelectItem value="Maintenance">Maintenance</SelectItem>
-                  <SelectItem value="Input Application">Input Application</SelectItem>
-                  <SelectItem value="Inspection">Inspection</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            </div> */}
             <Button onClick={handleReset} variant="outline" className="mt-2">
               Reset Filters
             </Button>

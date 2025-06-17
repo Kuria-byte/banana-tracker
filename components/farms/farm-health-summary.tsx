@@ -8,20 +8,29 @@ import { AlertTriangle, Activity, Check, X } from "lucide-react"
 import type { MonthlyHealthSummary, ScoringParameter } from "@/lib/types/farm-health"
 import { calculateMonthlyHealthSummary, getScoringParameters, getFarmIssuesSummary } from "@/app/actions/farm-health-actions"
 import { FarmHealthScoringModal } from "@/components/modals/farm-health-scoring-modal"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface FarmHealthSummaryProps {
   farmId: string
   month: number
   year: number
+  onPeriodChange?: (period: { month: number, year: number }) => void
 }
 
-export function FarmHealthSummary({ farmId, month, year }: FarmHealthSummaryProps) {
+export function FarmHealthSummary({ farmId, month, year, onPeriodChange }: FarmHealthSummaryProps) {
   const [summary, setSummary] = useState<MonthlyHealthSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [parameters, setParameters] = useState<ScoringParameter[]>([])
   const [issuesSummary, setIssuesSummary] = useState<{ topIssues: { type: string, count: number }[], total: number } | null>(null)
   const [showModal, setShowModal] = useState(false)
+
+  // Helper: generate month/year options
+  const months = [
+    "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"
+  ]
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - i)
 
   useEffect(() => {
     async function loadSummary() {
@@ -34,7 +43,7 @@ export function FarmHealthSummary({ farmId, month, year }: FarmHealthSummaryProp
           setSummary(null)
         }
         const issuesRes = await getFarmIssuesSummary(farmId, year, month)
-        if (issuesRes.success && issuesRes.data) {
+        if (issuesRes.success && issuesRes.data && typeof issuesRes.data === 'object' && 'topIssues' in issuesRes.data && 'total' in issuesRes.data) {
           setIssuesSummary(issuesRes.data)
         } else {
           setIssuesSummary(null)
@@ -110,11 +119,30 @@ export function FarmHealthSummary({ farmId, month, year }: FarmHealthSummaryProp
             <Activity className="h-5 w-5 text-primary" />
             <CardTitle>Monthly Health Summary</CardTitle>
           </div>
-          <Badge variant="outline" className="bg-white">
-            {new Date(year, month-1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-          </Badge>
+          <div className="flex gap-2 items-center">
+            <Select value={month.toString()} onValueChange={val => onPeriodChange && onPeriodChange({ month: Number(val), year })}>
+              <SelectTrigger className="w-28">
+                <SelectValue>{months[month - 1]}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {months.map((m, idx) => (
+                  <SelectItem key={m} value={(idx + 1).toString()}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={year.toString()} onValueChange={val => onPeriodChange && onPeriodChange({ month, year: Number(val) })}>
+              <SelectTrigger className="w-20">
+                <SelectValue>{year}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {years.map(y => (
+                  <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <CardDescription>Average health scores and key metrics for the current month</CardDescription>
+        <CardDescription>Average health scores and key metrics for the selected month</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         {loading ? (

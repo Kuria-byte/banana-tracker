@@ -114,6 +114,7 @@ export interface Task {
   assigneeName?: string;
   assigneeEmail?: string;
   plotName?: string; // Optional plot name for display purposes
+  createdAt?: string;
 }
 
 // Harvest interface
@@ -594,6 +595,7 @@ export const tasks: Task[] = [
     status: "Pending",
     priority: "High",
     type: "Input Application",
+    createdAt: "2023-06-01",
   },
   {
     id: "task2",
@@ -602,11 +604,11 @@ export const tasks: Task[] = [
     assignedToId: "user2",
     farmId: "farm1",
     plotId: "plot1",
-    // rowId: "row3",
     dueDate: "2023-06-10",
     status: "In Progress",
     priority: "Urgent",
     type: "Inspection",
+    createdAt: "2023-06-02",
   },
   {
     id: "task3",
@@ -619,6 +621,7 @@ export const tasks: Task[] = [
     status: "Pending",
     priority: "Medium",
     type: "Harvesting",
+    createdAt: "2023-06-03",
   },
   {
     id: "task4",
@@ -631,6 +634,7 @@ export const tasks: Task[] = [
     status: "Pending",
     priority: "Medium",
     type: "Planting",
+    createdAt: "2023-06-04",
   },
   {
     id: "task5",
@@ -643,6 +647,7 @@ export const tasks: Task[] = [
     status: "Completed",
     priority: "Low",
     type: "Maintenance",
+    createdAt: "2023-06-05",
   },
 ]
 

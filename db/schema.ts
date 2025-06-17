@@ -156,7 +156,7 @@ export const farmInspections = pgTable("farm_inspections", {
 // Inspection issues table
 export const inspectionIssues = pgTable("inspection_issues", {
   id: serial("id").primaryKey(),
-  inspectionId: integer("inspection_id").references(() => farmInspections.id).notNull(),
+  inspectionId: integer("inspection_id").references(() => farmInspections.id),
   plotId: integer("plot_id").references(() => plots.id),
   rowNumber: integer("row_number"),
   holeNumber: integer("hole_number"),
@@ -165,6 +165,9 @@ export const inspectionIssues = pgTable("inspection_issues", {
   status: varchar("status", { length: 32 }).default("Open"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   resolvedAt: timestamp("resolved_at"),
+  mitigationNotes: text("mitigation_notes"),
+  plantId: integer("plant_id"),
+  suckerId: integer("sucker_id"),
 })
 
 // Inspection metrics

@@ -15,7 +15,8 @@ import {
 } from "@/lib/mock-data/farm-health-scoring"
 import { db } from "@/db/client"
 import { farmInspections, inspectionMetrics, inspectionIssues, plots, farms } from "@/db/schema"
-import { eq, and, gte, lte, inArray, desc, or } from "drizzle-orm"
+import { eq, and, gte, lte, inArray, desc, or, isNull } from "drizzle-orm"
+import type { StandaloneIssueFormValues } from "@/lib/validations/form-schemas"
 
 // Get all scoring parameters (metric definitions)
 export async function getScoringParameters() {
@@ -143,6 +144,47 @@ export async function createInspectionIssue(
   }
 }
 
+// Create a standalone inspection issue (not linked to an inspection)
+export async function createStandaloneInspectionIssue(form: StandaloneIssueFormValues) {
+  try {
+    const values: any = {
+      plotId: form.plotId ? Number(form.plotId) : undefined,
+      rowNumber: form.rowNumber,
+      holeNumber: form.holeNumber,
+      plantId: form.plantId ? Number(form.plantId) : undefined,
+      suckerId: form.suckerId ? Number(form.suckerId) : undefined,
+      issueType: form.issueType,
+      description: form.description,
+      status: form.status || "Open",
+      createdAt: new Date(),
+    }
+    // Only set inspectionId if present (for standalone, omit it)
+    const [inserted] = await db.insert(inspectionIssues).values(values).returning()
+    return { success: true, data: inserted }
+  } catch (error) {
+    console.error("Error creating standalone inspection issue:", error)
+    return { success: false, error: "Failed to create standalone inspection issue" }
+  }
+}
+
+// Resolve an inspection issue with mitigation notes
+export async function resolveInspectionIssue(issueId: string, mitigationNotes: string) {
+  try {
+    const [updated] = await db.update(inspectionIssues)
+      .set({
+        status: "Resolved",
+        mitigationNotes,
+        resolvedAt: new Date(),
+      })
+      .where(eq(inspectionIssues.id, Number(issueId)))
+      .returning()
+    return { success: true, data: updated }
+  } catch (error) {
+    console.error("Error resolving inspection issue:", error)
+    return { success: false, error: "Failed to resolve inspection issue" }
+  }
+}
+
 // Get all issues for an inspection
 export async function getInspectionIssuesByInspectionId(inspectionId: string) {
   try {
@@ -211,8 +253,8 @@ export async function createScoringRecord(
     const metricsJson = Object.fromEntries(parameterScores.map(p => [p.parameterId, p.score]))
     // Insert into farmInspections
     const [inserted] = await db.insert(farmInspections).values({
-      farmId: Number(farmId),
-      plotId: plotId ? Number(plotId) : undefined,
+      farmId: farmId,
+      plotId: plotId || undefined,
       inspectionDate: new Date(),
       inspector: userId, // Store as number
       score: totalScore,
@@ -377,10 +419,30 @@ export async function getInspectionIssuesByFarmId(farmId: string) {
     // Get all inspections for the farm
     const inspections = await db.select().from(farmInspections).where(eq(farmInspections.farmId, Number(farmId)))
     const inspectionIds = inspections.map(i => i.id)
-    if (inspectionIds.length === 0) return { success: true, data: [] }
+    // Get all plots for the farm
+    const plotsForFarm = await db.select().from(plots).where(eq(plots.farmId, Number(farmId)))
+    const plotIds = plotsForFarm.map(p => p.id)
     // Get all issues for these inspections
-    const issues = await db.select().from(inspectionIssues).where(inArray(inspectionIssues.inspectionId, inspectionIds))
-    return { success: true, data: issues }
+    const issuesFromInspections = inspectionIds.length > 0
+      ? await db.select().from(inspectionIssues).where(inArray(inspectionIssues.inspectionId, inspectionIds))
+      : []
+    // Get standalone issues for this farm (inspectionId is null, plotId in farm's plots)
+    const standaloneIssues = plotIds.length > 0
+      ? await db.select().from(inspectionIssues).where(
+          and(
+            isNull(inspectionIssues.inspectionId),
+            inArray(inspectionIssues.plotId, plotIds)
+          )
+        )
+      : []
+    // Combine and return
+    const allIssues = [...issuesFromInspections, ...standaloneIssues]
+
+    // DEBUG: Log the actual issues returned from the DB
+    console.log('Fetched issues for farm', farmId, JSON.stringify(allIssues, null, 2));
+
+    // Drizzle returns camelCase keys, so just return as-is
+    return { success: true, data: allIssues }
   } catch (error) {
     console.error("Error fetching inspection issues by farmId:", error)
     return { success: false, error: "Failed to fetch inspection issues by farmId" }
@@ -438,4 +500,15 @@ export async function getPlotsWithPoorWatering(thresholdPercent = 50) {
     }
   }
   return results
+}
+
+// Fetch all issues for a given plotId (for plot-level issue tables)
+export async function getIssuesByPlotId(plotId: string | number) {
+  try {
+    const issues = await db.select().from(inspectionIssues).where(eq(inspectionIssues.plotId, Number(plotId)))
+    return { success: true, data: issues }
+  } catch (error) {
+    console.error("Error fetching issues by plotId:", error)
+    return { success: false, error: "Failed to fetch issues by plotId" }
+  }
 }

@@ -1,1 +1,1 @@
-[{"id":1,"inspection_id":22,"plot_id":28,"row_number":1,"hole_number":1,"issue_type":"Nutritional","description":"Add Manure","status":"Open","created_at":"2025-05-12 14:50:40.566","resolved_at":null,"plant_id":null,"sucker_id":null}]
+[{"id":7,"inspection_id":29,"plot_id":43,"row_number":2,"hole_number":13,"issue_type":"Damage","description":"Fallen plants","status":"Resolved","created_at":"2025-05-28 16:22:16.381","resolved_at":"2025-06-17 16:37:52.847","plant_id":null,"sucker_id":null,"mitigation_notes":null}]

@@ -130,13 +130,23 @@ export async function updateTask(id: number, values: TaskFormValues & { status?:
 }
 
 export async function updateTaskStatus(id: number, status: string): Promise<Task> {
+  const dbStatus = mapTaskStatusToDb(status)
+  if (!dbStatus) {
+    throw new Error(`Invalid status value: ${status}`)
+  }
   try {
+    const updateData: any = {
+      status: dbStatus,
+      updatedAt: new Date(),
+    }
+    if (dbStatus === "COMPLETED") {
+      updateData.completedDate = new Date()
+    } else {
+      updateData.completedDate = null
+    }
     const result = await db
       .update(tasks)
-      .set({
-        status: status as any,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(tasks.id, id))
       .returning()
 

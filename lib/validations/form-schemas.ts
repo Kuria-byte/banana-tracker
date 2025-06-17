@@ -190,3 +190,18 @@ export const harvestFormSchema = z.object({
 })
 
 export type HarvestFormValues = z.infer<typeof harvestFormSchema>
+
+// Standalone inspection issue form schema
+export const standaloneIssueFormSchema = z.object({
+  farmId: z.string().min(1, { message: "Farm is required" }),
+  plotId: z.string().min(1, { message: "Plot is required" }),
+  rowNumber: z.coerce.number().int().optional(),
+  holeNumber: z.coerce.number().int().optional(),
+  issueType: z.string().min(1, { message: "Issue type is required" }),
+  description: z.string().min(1, { message: "Description is required" }),
+  status: z.string().default("Open"),
+  plantId: z.string().optional(),
+  suckerId: z.string().optional(),
+})
+
+export type StandaloneIssueFormValues = z.infer<typeof standaloneIssueFormSchema>
