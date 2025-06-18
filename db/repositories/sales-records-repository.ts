@@ -1,5 +1,5 @@
 import { db } from "../client"
-import { sales, farms, buyers, plots, users } from "../schema"
+import { sales, farms, buyers, plots, users, harvestRecords } from "../schema"
 import { eq, sql, and, gte, lte } from "drizzle-orm"
 
 // Types for return value
@@ -16,11 +16,15 @@ export interface SalesRecordFull {
   quantity: number
   unitPrice: number
   totalAmount: number
-  buyerId: string
+  buyerId: number
   buyerName: string | null
   paymentStatus: string
   paymentMethod?: string | null
   notes?: string | null
+  harvestRecordId?: number | null
+  harvestDate?: Date | null
+  harvestBunchCount?: number | null
+  harvestWeight?: number | null
 }
 
 // Define filter type for queries
@@ -30,7 +34,7 @@ export interface SalesRecordFilters {
   farmId?: number
   plotId?: number
   userId?: number
-  buyerId?: string
+  buyerId?: number
   id?: number
 }
 
@@ -63,12 +67,17 @@ export async function getAllSalesRecords(filters: SalesRecordFilters = {}): Prom
       paymentStatus: sales.paymentStatus,
       paymentMethod: sales.paymentMethod,
       notes: sales.notes,
+      harvestRecordId: sales.harvestRecordId,
+      harvestDate: harvestRecords.harvestDate,
+      harvestBunchCount: harvestRecords.quantity,
+      harvestWeight: harvestRecords.weight,
     })
     .from(sales)
     .leftJoin(farms, eq(sales.farmId, farms.id))
     .leftJoin(plots, eq(sales.plotId, plots.id))
     .leftJoin(users, eq(sales.userId, users.id))
     .leftJoin(buyers, eq(sales.buyerId, buyers.id))
+    .leftJoin(harvestRecords, eq(sales.harvestRecordId, harvestRecords.id))
 
   const filterConds = []
   const startDate = filters.startDate ? (typeof filters.startDate === "string" ? new Date(filters.startDate) : filters.startDate) : undefined
@@ -89,6 +98,11 @@ export async function getAllSalesRecords(filters: SalesRecordFilters = {}): Prom
     ...r,
     unitPrice: Number(r.unitPrice),
     totalAmount: Number(r.totalAmount),
+    buyerId: r.buyerId !== undefined && r.buyerId !== null ? Number(r.buyerId) : null,
+    harvestRecordId: r.harvestRecordId ?? null,
+    harvestDate: r.harvestDate ?? null,
+    harvestBunchCount: r.harvestBunchCount ?? null,
+    harvestWeight: r.harvestWeight !== undefined && r.harvestWeight !== null ? Number(r.harvestWeight) : null,
   })) : []
 }
 
@@ -157,23 +171,42 @@ export async function getTopProducts(args?: { startDate?: string | Date, endDate
 
 // Create a new sales record
 export async function createSalesRecord(data: Omit<SalesRecordFull, "id" | "farmName" | "plotName" | "userName" | "buyerName">): Promise<SalesRecordFull> {
-  // Map plotId/userId to plot_id/user_id for DB
-  const insertData: any = {
-    ...data,
-    unitPrice: data.unitPrice.toString(),
-    totalAmount: data.totalAmount.toString(),
+  try {
+    console.log('[createSalesRecord] Inserting data:', JSON.stringify(data, null, 2));
+    const insertData: any = { ...data };
+    // Ensure date is a JS Date object
+    if (typeof insertData.date === 'string') {
+      const parsed = new Date(insertData.date);
+      if (!isNaN(parsed.getTime())) {
+        insertData.date = parsed;
+      } else {
+        console.error('[createSalesRecord] Invalid date string:', insertData.date);
+        throw new Error('Invalid date value for DB insert');
+      }
+    }
+    if (!(insertData.date instanceof Date)) {
+      console.error('[createSalesRecord] Date is not a Date object:', insertData.date);
+      throw new Error('Date must be a Date object for DB insert');
+    }
+    // Map plotId/userId to plot_id/user_id for DB
+    if ("plotId" in insertData) {
+      insertData.plotId = insertData.plotId
+      delete insertData.plotId
+    }
+    if ("userId" in insertData) {
+      insertData.userId = insertData.userId
+      delete insertData.userId
+    }
+    if (data.harvestRecordId !== undefined) insertData.harvestRecordId = data.harvestRecordId
+    insertData.unitPrice = data.unitPrice.toString();
+    insertData.totalAmount = data.totalAmount.toString();
+    const [inserted] = await db.insert(sales).values(insertData).returning();
+    const [full] = await getAllSalesRecords({ id: inserted.id });
+    return full;
+  } catch (error: any) {
+    console.error('[createSalesRecord] DB error:', error?.message || error);
+    throw new Error(error?.message || 'Failed to insert sales record');
   }
-  if ("plotId" in insertData) {
-    insertData.plotId = insertData.plotId
-    delete insertData.plotId
-  }
-  if ("userId" in insertData) {
-    insertData.userId = insertData.userId
-    delete insertData.userId
-  }
-  const [inserted] = await db.insert(sales).values(insertData).returning()
-  const [full] = await getAllSalesRecords({ id: inserted.id })
-  return full
 }
 
 // Update a sales record

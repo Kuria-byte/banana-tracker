@@ -236,7 +236,7 @@ export function ExpenseSummary({ period = "month" }: ExpenseSummaryProps) {
                 </div>
               </div>
 
-              <div className="rounded-lg border bg-card p-3">
+              {/* <div className="rounded-lg border bg-card p-3">
                 <div className="flex items-center gap-2">
                   <div className="rounded-full bg-orange-100 p-2 dark:bg-orange-900">
                     <PercentIcon className="h-4 w-4 text-orange-600 dark:text-orange-400" />
@@ -250,9 +250,9 @@ export function ExpenseSummary({ period = "month" }: ExpenseSummaryProps) {
                     className={`h-2 ${percentageBudget > 90 ? "bg-red-200" : "bg-orange-200"}`}
                   />
                 </div>
-              </div>
+              </div> */}
 
-              <div className="rounded-lg border bg-card p-3">
+              {/* <div className="rounded-lg border bg-card p-3">
                 <div className="flex items-center gap-2">
                   <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900">
                     <PiggyBank className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -263,7 +263,7 @@ export function ExpenseSummary({ period = "month" }: ExpenseSummaryProps) {
                 <p className="mt-1 text-xs text-muted-foreground">
                   From {formatCurrency(budgetTotal)} total budget
                 </p>
-              </div>
+              </div> */}
             </div>
           </TabsContent>
 

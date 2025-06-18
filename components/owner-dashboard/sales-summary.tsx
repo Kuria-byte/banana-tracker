@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getSalesSummary, getSalesChartData, getAllSalesRecords } from "@/app/actions/owner-dashboard-actions"
+import { getSalesSummary, getSalesChartData, getAllSalesRecords, getHarvestConversionSummaryAction } from "@/app/actions/owner-dashboard-actions"
 import type { SalesSummary as SalesSummaryType, SalesChartData, SalesRecord, DashboardPeriod } from "@/lib/types/owner-dashboard"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ArrowDown, ArrowUp, BarChart3, DollarSign, Users } from "lucide-react"
@@ -23,15 +23,19 @@ export function SalesSummary({ period = "month" }: SalesSummaryProps) {
   const [chartData, setChartData] = useState<SalesChartData | null>(null)
   const [recentSales, setRecentSales] = useState<SalesRecord[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [harvestConversion, setHarvestConversion] = useState<any[]>([])
+  const [loadingHarvestConversion, setLoadingHarvestConversion] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
+      setLoadingHarvestConversion(true)
       try {
-        const [summaryResult, chartResult, salesResult] = await Promise.all([
+        const [summaryResult, chartResult, salesResult, harvestConvResult] = await Promise.all([
           getSalesSummary(period),
           getSalesChartData(period),
           getAllSalesRecords(period),
+          getHarvestConversionSummaryAction(period),
         ])
 
         if (summaryResult.success && summaryResult.data) {
@@ -52,11 +56,19 @@ export function SalesSummary({ period = "month" }: SalesSummaryProps) {
 
           setRecentSales(sortedSales)
         }
+
+        if (harvestConvResult.success && Array.isArray(harvestConvResult.data)) {
+          setHarvestConversion(harvestConvResult.data)
+        } else {
+          setHarvestConversion([])
+        }
       } catch (err) {
         setError("An error occurred while fetching data")
+        setHarvestConversion([])
         console.error(err)
       } finally {
         setLoading(false)
+        setLoadingHarvestConversion(false)
       }
     }
 
@@ -140,6 +152,9 @@ export function SalesSummary({ period = "month" }: SalesSummaryProps) {
             <TabsTrigger value="products" className="flex-1">
               Top Products
             </TabsTrigger>
+            <TabsTrigger value="harvest" className="flex-1">
+              Harvest Conversion
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="p-6 pt-4">
@@ -199,14 +214,14 @@ export function SalesSummary({ period = "month" }: SalesSummaryProps) {
               </div>
             </div>
 
-            {formattedData && (
+            {/* {formattedData && (
               <div className="mt-6">
                 <h4 className="mb-2 text-sm font-medium">Revenue Trend</h4>
                 <div className="h-[200px] w-full">
                   <BarChart data={formattedData} />
                 </div>
               </div>
-            )}
+            )} */}
           </TabsContent>
 
           <TabsContent value="recent" className="p-6 pt-4">
@@ -275,6 +290,42 @@ export function SalesSummary({ period = "month" }: SalesSummaryProps) {
                   </div>
                 ))}
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="harvest" className="p-6 pt-4">
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium">Harvest Conversion Rate</h4>
+              {loadingHarvestConversion ? (
+                <div className="text-muted-foreground text-sm">Loading harvest conversion data...</div>
+              ) : harvestConversion.length === 0 ? (
+                <div className="text-muted-foreground text-sm">No harvest records found for this period.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm border">
+                    <thead>
+                      <tr className="bg-muted">
+                        <th className="px-2 py-1 text-left">Date</th>
+                        <th className="px-2 py-1 text-right">Harvested (kg)</th>
+                        <th className="px-2 py-1 text-right">Sold (kg)</th>
+                        <th className="px-2 py-1 text-right">Unsold (kg)</th>
+                        <th className="px-2 py-1 text-right">Conversion Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {harvestConversion.map((h) => (
+                        <tr key={h.id}>
+                          <td className="px-2 py-1">{h.harvestDate ? format(new Date(h.harvestDate), "MMM d, yyyy") : "—"}</td>
+                          <td className="px-2 py-1 text-right">{h.harvestedWeight}</td>
+                          <td className="px-2 py-1 text-right">{h.soldWeight}</td>
+                          <td className="px-2 py-1 text-right">{h.remainingWeight}</td>
+                          <td className={`px-2 py-1 text-right font-semibold ${h.conversionRate < 80 ? 'text-red-600' : 'text-green-700'}`}>{h.conversionRate.toFixed(1)}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>

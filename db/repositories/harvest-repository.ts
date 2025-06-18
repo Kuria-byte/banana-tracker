@@ -1,6 +1,6 @@
 import { db } from "../client";
-import { harvestRecords } from "../schema";
-import { eq } from "drizzle-orm";
+import { harvestRecords, sales } from "../schema";
+import { eq, sql, and, gte, lte } from "drizzle-orm";
 
 // Define the Harvest type (should match your UI type)
 export interface Harvest {
@@ -98,4 +98,77 @@ function harvestDbToModel(dbHarvest: any): Harvest {
     notes: dbHarvest.notes ?? "",
     growthRecordIds: Array.isArray(dbHarvest.growthRecordIds) ? dbHarvest.growthRecordIds : (dbHarvest.growthRecordIds ? JSON.parse(dbHarvest.growthRecordIds) : undefined),
   };
+}
+
+// Fetch harvests by farmId and/or plotId
+export async function getHarvestsByFarmAndPlot({ farmId, plotId }: { farmId?: number; plotId?: number }) : Promise<Harvest[]> {
+  let query = db.select().from(harvestRecords)
+  if (farmId) query = query.where(eq(harvestRecords.farmId, farmId))
+  if (plotId) query = query.where(eq(harvestRecords.plotId, plotId))
+  const results = await query
+  return results.map(harvestDbToModel)
+}
+
+export async function getHarvestSalesSummary(harvestId: number) {
+  // Get the harvest record and sum of sales linked to it
+  const result = await db
+    .select({
+      harvestId: harvestRecords.id,
+      harvestedWeight: harvestRecords.weight,
+      soldWeight: sql`COALESCE(SUM(${sales.quantity}), 0)`
+    })
+    .from(harvestRecords)
+    .leftJoin(sales, eq(sales.harvestRecordId, harvestRecords.id))
+    .where(eq(harvestRecords.id, harvestId))
+    .groupBy(harvestRecords.id, harvestRecords.weight)
+
+  if (!result || !result[0]) return null
+  const { harvestedWeight, soldWeight } = result[0]
+  const harvested = Number(harvestedWeight || 0)
+  const sold = Number(soldWeight || 0)
+  const remaining = harvested - sold
+  const conversionRate = harvested > 0 ? (sold / harvested) * 100 : 0
+  return {
+    harvestId,
+    harvestedWeight: harvested,
+    soldWeight: sold,
+    remainingWeight: remaining,
+    conversionRate
+  }
+}
+
+export async function getHarvestConversionSummary({ startDate, endDate }: { startDate?: string | Date, endDate?: string | Date } = {}) {
+  // Build date filter
+  let filterConds = []
+  if (startDate) filterConds.push(gte(harvestRecords.harvestDate, typeof startDate === 'string' ? new Date(startDate) : startDate))
+  if (endDate) filterConds.push(lte(harvestRecords.harvestDate, typeof endDate === 'string' ? new Date(endDate) : endDate))
+  const where = filterConds.length > 0 ? and(...filterConds) : undefined
+
+  const results = await db
+    .select({
+      id: harvestRecords.id,
+      harvestDate: harvestRecords.harvestDate,
+      harvestedWeight: harvestRecords.weight,
+      soldWeight: sql`COALESCE(SUM(${sales.quantity}), 0)`
+    })
+    .from(harvestRecords)
+    .leftJoin(sales, eq(sales.harvestRecordId, harvestRecords.id))
+    .where(where)
+    .groupBy(harvestRecords.id, harvestRecords.harvestDate, harvestRecords.weight)
+    .orderBy(harvestRecords.harvestDate)
+
+  return results.map(r => {
+    const harvested = Number(r.harvestedWeight || 0)
+    const sold = Number(r.soldWeight || 0)
+    const remaining = harvested - sold
+    const conversionRate = harvested > 0 ? (sold / harvested) * 100 : 0
+    return {
+      id: r.id,
+      harvestDate: r.harvestDate,
+      harvestedWeight: harvested,
+      soldWeight: sold,
+      remainingWeight: remaining,
+      conversionRate
+    }
+  })
 } 

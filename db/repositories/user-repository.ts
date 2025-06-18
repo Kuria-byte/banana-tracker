@@ -2,6 +2,8 @@ import { db } from "../client";
 import { users } from "../schema";
 import { eq } from "drizzle-orm";
 import type { User } from "@/lib/mock-data";
+import { buyers } from "../schema";
+import type { Buyer } from "@/lib/types/buyer";
 
 export async function getAllUsers(): Promise<User[]> {
   const result = await db.select().from(users);
@@ -98,4 +100,23 @@ function userDbToModel(dbUser: any): User {
     responsibilities: Array.isArray(dbUser.responsibilities) ? dbUser.responsibilities : [],
     skills: Array.isArray(dbUser.skills) ? dbUser.skills : [],
   };
+}
+
+// Fetch all buyers from the database
+export async function getAllBuyers(): Promise<Buyer[]> {
+  const results = await db.select().from(buyers)
+  return results.map((row: any) => ({
+    id: String(row.id),
+    name: row.name || "",
+    company: row.company || row.contact || "",
+    email: row.email || row.contact || "",
+    phone: row.phone || "",
+    address: row.address || "",
+    preferredProducts: row.preferredProducts || [],
+    notes: row.notes || "",
+    status: row.status || "active",
+    createdAt: row.createdAt ? (typeof row.createdAt === 'string' ? row.createdAt : row.createdAt.toISOString()) : "",
+    updatedAt: row.updatedAt ? (typeof row.updatedAt === 'string' ? row.updatedAt : row.updatedAt.toISOString()) : undefined,
+    totalPurchases: row.totalPurchases || 0,
+  }))
 } 

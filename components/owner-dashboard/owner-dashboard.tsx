@@ -39,12 +39,7 @@ export function OwnerDashboard({ period }: OwnerDashboardProps) {
       <div className="flex justify-between items-center mb-6">
        
         <div className="flex gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/owner-dashboard/buyers">
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              Manage Buyers
-            </Link>
-          </Button>
+        
           {/* Other action buttons can go here */}
         </div>
       </div>
@@ -54,14 +49,20 @@ export function OwnerDashboard({ period }: OwnerDashboardProps) {
           <p className="text-muted-foreground">Monitor your farm's financial performance and health</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <SalesFormModal />
-          <ExpenseFormModal />
-          <BudgetFormModal />
-          <ReportModal />
+         
+          {/* <BudgetFormModal /> */}
+          {/* <ReportModal /> */}
           <Button variant="outline" asChild>
             <Link href="/owner-dashboard/financial-records">
               <FileText className="mr-2 h-4 w-4" />
               View All Records
+            </Link>
+          </Button>
+
+          <Button asChild variant="outline" size="sm">
+            <Link href="/owner-dashboard/buyers">
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              Manage Buyers
             </Link>
           </Button>
         </div>

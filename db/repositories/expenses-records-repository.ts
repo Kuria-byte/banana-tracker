@@ -184,18 +184,38 @@ export async function getTopExpenseCategories({ startDate, endDate } = {}) {
 }
 
 export async function createExpenseRecord(data: Omit<ExpenseRecordFull, "id" | "farmName" | "plotName" | "userName">): Promise<ExpenseRecordFull> {
-  const insertData: any = { ...data }
-  if ("plotId" in insertData) {
-    insertData.plot_id = insertData.plotId
-    delete insertData.plotId
+  try {
+    console.log('[createExpenseRecord] Inserting data:', JSON.stringify(data, null, 2));
+    const insertData: any = { ...data };
+    // Ensure date is a JS Date object
+    if (typeof insertData.date === 'string') {
+      const parsed = new Date(insertData.date);
+      if (!isNaN(parsed.getTime())) {
+        insertData.date = parsed;
+      } else {
+        console.error('[createExpenseRecord] Invalid date string:', insertData.date);
+        throw new Error('Invalid date value for DB insert');
+      }
+    }
+    if (!(insertData.date instanceof Date)) {
+      console.error('[createExpenseRecord] Date is not a Date object:', insertData.date);
+      throw new Error('Date must be a Date object for DB insert');
+    }
+    if ("plotId" in insertData) {
+      insertData.plot_id = insertData.plotId
+      delete insertData.plotId
+    }
+    if ("userId" in insertData) {
+      insertData.user_id = insertData.userId
+      delete insertData.userId
+    }
+    const [inserted] = await db.insert(expenses).values(insertData).returning()
+    const [full] = await getAllExpensesRecords({ id: inserted.id })
+    return full
+  } catch (error: any) {
+    console.error('[createExpenseRecord] DB error:', error?.message || error)
+    throw new Error(error?.message || 'Failed to insert expense record')
   }
-  if ("userId" in insertData) {
-    insertData.user_id = insertData.userId
-    delete insertData.userId
-  }
-  const [inserted] = await db.insert(expenses).values(insertData).returning()
-  const [full] = await getAllExpensesRecords({ id: inserted.id })
-  return full
 }
 
 export async function updateExpenseRecord(id: number, data: Partial<Omit<ExpenseRecordFull, "id" | "farmName" | "plotName" | "userName">>): Promise<ExpenseRecordFull | null> {

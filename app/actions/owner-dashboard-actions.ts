@@ -14,8 +14,9 @@ import {
   getAllFarmsPerformance as calculateAllFarmsPerformance,
 } from "@/lib/mock-data/owner-dashboard-enhanced"
 import { getSalesSummary as dbGetSalesSummary, getSalesChartData as dbGetSalesChartData, getAllSalesRecords as repoGetAllSalesRecords, createSalesRecord, updateSalesRecord, deleteSalesRecord } from "@/db/repositories/sales-records-repository"
-import { getExpensesSummary as dbGetExpensesSummary, getExpensesChartData as dbGetExpensesChartData, getAllExpensesRecords as repoGetAllExpensesRecords, createExpenseRecord, updateExpenseRecord } from "@/db/repositories/expenses-records-repository"
+import { getExpensesSummary as dbGetExpensesSummary, getExpensesChartData as dbGetExpensesChartData, getAllExpensesRecords as repoGetAllExpensesRecords, createExpenseRecord, updateExpenseRecord, deleteExpenseRecord as repoDeleteExpenseRecord } from "@/db/repositories/expenses-records-repository"
 import { getAllBudgets, getBudgetSummary as dbGetBudgetSummary, createBudgetRecord, updateBudgetRecord } from "@/db/repositories/budgets-repository"
+import { getHarvestsByFarmAndPlot, getHarvestSalesSummary, getHarvestConversionSummary } from "@/db/repositories/harvest-repository"
 
 // Get sales summary
 export async function getSalesSummary(
@@ -175,49 +176,82 @@ export async function getExpenseChartData(
 // Add new sale record
 export async function addSaleRecord(formData: SalesFormData) {
   try {
-    // Calculate total amount
-    const totalAmount = formData.quantity * formData.unitPrice
+    console.log('[addSaleRecord] Received payload:', JSON.stringify(formData, null, 2));
+    // Normalize and validate data
+    if (!formData.farmId || !formData.date || !formData.product || !formData.quantity || !formData.unitPrice || !formData.buyerId || !formData.paymentStatus) {
+      const msg = '[addSaleRecord] Missing required field(s)';
+      console.error(msg, formData);
+      return { success: false, error: msg };
+    }
+    // Coerce types
+    const totalAmount = Number(formData.quantity) * Number(formData.unitPrice);
     const saleData = {
       ...formData,
-      totalAmount,
+      farmId: Number(formData.farmId),
       plotId: formData.plotId ? Number(formData.plotId) : undefined,
       userId: formData.userId ? Number(formData.userId) : undefined,
+      buyerId: Number(formData.buyerId),
+      totalAmount,
+      date: typeof formData.date === 'string' ? formData.date : (formData.date instanceof Date ? formData.date.toISOString() : ''),
+      harvestRecordId: formData.harvestRecordId !== undefined ? Number(formData.harvestRecordId) : undefined,
+    };
+    console.log('[addSaleRecord] Normalized saleData:', JSON.stringify(saleData, null, 2));
+    if (!saleData.date) {
+      const msg = '[addSaleRecord] Invalid or missing date';
+      console.error(msg, saleData);
+      return { success: false, error: msg };
     }
-    const newSale = await createSalesRecord(saleData)
-    revalidatePath("/owner-dashboard")
+    const newSale = await createSalesRecord(saleData);
+    revalidatePath("/owner-dashboard");
     return {
       success: true,
       data: newSale,
-    }
-  } catch (error) {
-    console.error("Error adding sale record:", error)
+    };
+  } catch (error: any) {
+    console.error("[addSaleRecord] Error adding sale record:", error?.message || error);
     return {
       success: false,
-      error: "Failed to add sale record",
-    }
+      error: error?.message || "Failed to add sale record",
+    };
   }
 }
 
 // Add new expense record
 export async function addExpenseRecord(formData: ExpenseFormData) {
   try {
+    console.log('[addExpenseRecord] Received payload:', JSON.stringify(formData, null, 2));
+    // Normalize and validate data
+    if (!formData.farmId || !formData.date || !formData.category || !formData.amount || !formData.paymentMethod) {
+      const msg = '[addExpenseRecord] Missing required field(s)';
+      console.error(msg, formData);
+      return { success: false, error: msg };
+    }
     const expenseData = {
       ...formData,
+      farmId: Number(formData.farmId),
       plotId: formData.plotId ? Number(formData.plotId) : undefined,
       userId: formData.userId ? Number(formData.userId) : undefined,
+      amount: Number(formData.amount),
+      date: typeof formData.date === 'string' ? formData.date : (formData.date instanceof Date ? formData.date.toISOString() : ''),
+    };
+    console.log('[addExpenseRecord] Normalized expenseData:', JSON.stringify(expenseData, null, 2));
+    if (!expenseData.date) {
+      const msg = '[addExpenseRecord] Invalid or missing date';
+      console.error(msg, expenseData);
+      return { success: false, error: msg };
     }
-    const newExpense = await createExpenseRecord(expenseData)
-    revalidatePath("/owner-dashboard")
+    const newExpense = await createExpenseRecord(expenseData);
+    revalidatePath("/owner-dashboard");
     return {
       success: true,
       data: newExpense,
-    }
-  } catch (error) {
-    console.error("Error adding expense record:", error)
+    };
+  } catch (error: any) {
+    console.error("[addExpenseRecord] Error adding expense record:", error?.message || error);
     return {
       success: false,
-      error: "Failed to add expense record",
-    }
+      error: error?.message || "Failed to add expense record",
+    };
   }
 }
 
@@ -407,5 +441,50 @@ export async function getAllBudgetRecords(
       userId: userId ? Number(userId) : undefined,
       category,
     }),
+  }
+}
+
+// Fetch harvest records for a given farm and/or plot (for sales form)
+export async function getHarvestsForSaleForm(farmId?: number, plotId?: number) {
+  try {
+    const harvests = await getHarvestsByFarmAndPlot({ farmId, plotId })
+    return { success: true, data: harvests }
+  } catch (error) {
+    console.error("Error fetching harvests for sale form:", error)
+    return { success: false, error: "Failed to fetch harvest records", data: [] }
+  }
+}
+
+// Fetch harvest sales summary for a given harvestId
+export async function getHarvestSalesSummaryAction(harvestId: number) {
+  try {
+    const summary = await getHarvestSalesSummary(harvestId)
+    return { success: true, data: summary }
+  } catch (error) {
+    console.error("Error fetching harvest sales summary:", error)
+    return { success: false, error: "Failed to fetch harvest sales summary" }
+  }
+}
+
+// Fetch harvest conversion summary for dashboard
+export async function getHarvestConversionSummaryAction(period: DashboardPeriod = "month", startDate?: string, endDate?: string) {
+  try {
+    // Optionally map period to date range here
+    const summary = await getHarvestConversionSummary({ startDate, endDate })
+    return { success: true, data: summary }
+  } catch (error) {
+    console.error("Error fetching harvest conversion summary:", error)
+    return { success: false, error: "Failed to fetch harvest conversion summary" }
+  }
+}
+
+// Delete expense record
+export async function deleteExpenseRecord(id: number) {
+  try {
+    const result = await repoDeleteExpenseRecord(id);
+    revalidatePath("/owner-dashboard");
+    return { success: result };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to delete expense record" };
   }
 }

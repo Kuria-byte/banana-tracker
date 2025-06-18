@@ -260,6 +260,7 @@ export const sales = pgTable("sales", {
   paymentStatus: paymentStatusEnum("payment_status").notNull(),
   paymentMethod: paymentMethodEnum("payment_method"),
   notes: text("notes"),
+  harvestRecordId: integer("harvest_record_id").references(() => harvestRecords.id),
 })
 
 // Expenses

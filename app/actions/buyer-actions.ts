@@ -3,11 +3,16 @@
 import { revalidatePath } from "next/cache"
 import { buyers as mockBuyers } from "@/lib/mock-data/buyers"
 import type { Buyer, BuyerFormData } from "@/lib/types/buyer"
+import { getAllBuyers } from "@/db/repositories/user-repository"
 
 // Get all buyers
 export async function getBuyers(): Promise<Buyer[]> {
-  // In a real app, this would fetch from a database
-  return [...mockBuyers] // Return a copy to avoid mutations
+  try {
+    return await getAllBuyers()
+  } catch (error) {
+    console.error("Error fetching buyers from DB:", error)
+    return []
+  }
 }
 
 // Get a buyer by ID

@@ -69,12 +69,18 @@ export function ExpenseForm({ onSuccess }: ExpenseFormProps) {
     setLoadingFarms(true)
     getAllFarms()
       .then((res) => setFarms(res.farms || []))
-      .catch(() => setErrorFarms("Failed to load farms"))
+      .catch((err) => {
+        setErrorFarms("Failed to load farms")
+        console.error("Error loading farms:", err)
+      })
       .finally(() => setLoadingFarms(false))
     setLoadingUsers(true)
     getAllUsers()
       .then((data) => setUsers(data))
-      .catch(() => setErrorUsers("Failed to load users"))
+      .catch((err) => {
+        setErrorUsers("Failed to load users")
+        console.error("Error loading users:", err)
+      })
       .finally(() => setLoadingUsers(false))
   }, [])
 
@@ -85,7 +91,10 @@ export function ExpenseForm({ onSuccess }: ExpenseFormProps) {
       setLoadingPlots(true)
       getPlotsByFarmId(Number(watchFarmId))
         .then((res) => setPlots(res.plots || []))
-        .catch(() => setErrorPlots("Failed to load plots"))
+        .catch((err) => {
+          setErrorPlots("Failed to load plots")
+          console.error("Error loading plots:", err)
+        })
         .finally(() => setLoadingPlots(false))
       // Clear plotId if farm changes
       form.setValue("plotId", "NONE")
@@ -115,6 +124,7 @@ export function ExpenseForm({ onSuccess }: ExpenseFormProps) {
         form.reset()
         if (onSuccess) onSuccess()
       } else {
+        console.error("Error recording expense:", result.error)
         toast({
           title: "Error recording expense",
           description: result.error || "An unknown error occurred",
@@ -122,6 +132,7 @@ export function ExpenseForm({ onSuccess }: ExpenseFormProps) {
         })
       }
     } catch (error) {
+      console.error("Unexpected error recording expense:", error)
       toast({
         title: "Error recording expense",
         description: "An unexpected error occurred. Please try again.",

@@ -2,7 +2,7 @@
 
 // Sales Data Types
 export interface SalesRecord {
-  id: string
+  id: number
   farmId: number
   plotId?: number
   userId?: number
@@ -16,6 +16,11 @@ export interface SalesRecord {
   paymentStatus: "Paid" | "Pending" | "Partial"
   paymentMethod?: "Cash" | "Bank Transfer" | "Mobile Money"
   notes?: string
+  harvestRecordId?: number // Optional: links sale to a harvest record
+  farmName?: string // Name of the farm
+  harvestDate?: string // ISO date string for harvest (if linked)
+  harvestBunchCount?: number // Bunch count from harvest
+  harvestWeight?: number // Weight (kg) from harvest
 }
 
 export interface SalesSummary {
@@ -133,6 +138,7 @@ export interface SalesFormData {
   paymentStatus: "Paid" | "Pending" | "Partial"
   paymentMethod?: "Cash" | "Bank Transfer" | "Mobile Money"
   notes?: string
+  harvestRecordId?: number // Optional: links sale to a harvest record
 }
 
 export interface ExpenseFormData {

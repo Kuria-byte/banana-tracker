@@ -5,6 +5,8 @@ export const salesFormSchema = z.object({
   farmId: z.string().min(1, {
     message: "Please select a farm.",
   }),
+  plotId: z.string().optional().nullable(),
+  harvestRecordId: z.string().optional().nullable(),
   date: z.date({
     required_error: "Please select a date.",
   }),
