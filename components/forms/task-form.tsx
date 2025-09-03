@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
 import { taskFormSchema, type TaskFormValues } from "@/lib/validations/form-schemas"
-import { createTask } from "@/app/actions/task-actions"
+import { createTask, updateTask } from "@/app/actions/task-actions"
 import { getAllUsers, getUserByEmail } from "@/app/actions/team-actions"
 import { getAllFarms } from "@/app/actions/farm-actions"
 import { getPlotsByFarmId } from "@/app/actions/plot-actions"
@@ -152,48 +152,60 @@ export function TaskForm({ initialData, farmId, onSuccess }: TaskFormProps) {
     setIsSubmitting(true)
     
     try {
-      // Check if we have the current user from the database
-      if (!dbUser || !dbUser.id) {
-        // If we don't have the user yet, try to look it up again
-        if (user?.primaryEmail) {
-          setUserLookupLoading(true)
-          const dbUserResult = await getUserByEmail(user.primaryEmail)
-          setUserLookupLoading(false)
-          
-          if (!dbUserResult || !dbUserResult.id) {
-            setUserLookupError("Could not find your user record in the database. Task not created.")
-            console.error("User not found in database for email:", user.primaryEmail)
+      const isUpdate = initialData?.id
+      
+      // For new tasks, we need the current user as creator
+      if (!isUpdate) {
+        if (!dbUser || !dbUser.id) {
+          // If we don't have the user yet, try to look it up again
+          if (user?.primaryEmail) {
+            setUserLookupLoading(true)
+            const dbUserResult = await getUserByEmail(user.primaryEmail)
+            setUserLookupLoading(false)
+            
+            if (!dbUserResult || !dbUserResult.id) {
+              setUserLookupError("Could not find your user record in the database. Task not created.")
+              console.error("User not found in database for email:", user.primaryEmail)
+              setIsSubmitting(false)
+              return
+            }
+            
+            setDbUser(dbUserResult)
+          } else {
+            setUserLookupError("No user email found. Task not created.")
             setIsSubmitting(false)
             return
           }
-          
-          setDbUser(dbUserResult)
-        } else {
-          setUserLookupError("No user email found. Task not created.")
-          setIsSubmitting(false)
-          return
         }
       }
-      
-      // Prepare the task data with creator ID
-      const creatorId = dbUser.id.toString()
-      console.log("Creating task with creator ID:", creatorId)
       
       // Clean up the plotId if it's "NONE"
       if (values.plotId === "NONE") {
         values.plotId = ""
       }
       
-      // Call the server action to create the task
-      const result = await createTask({ 
-        ...values, 
-        creatorId 
-      })
+      let result
+      
+      if (isUpdate) {
+        // Update existing task
+        console.log("Updating task with ID:", initialData.id)
+        result = await updateTask(initialData.id, values)
+      } else {
+        // Create new task
+        const creatorId = dbUser.id.toString()
+        console.log("Creating task with creator ID:", creatorId)
+        result = await createTask({ 
+          ...values, 
+          creatorId 
+        })
+      }
 
       if (result.success) {
         toast({
-          title: "Task created",
-          description: "Your new task has been created successfully.",
+          title: isUpdate ? "Task updated" : "Task created",
+          description: isUpdate 
+            ? "Your task has been updated successfully."
+            : "Your new task has been created successfully.",
         })
 
         if (onSuccess) {

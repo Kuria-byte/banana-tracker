@@ -5,14 +5,17 @@ import { type Task, getPlotById } from "@/lib/mock-data"
 import { Badge } from "@/components/ui/badge"
 import { formatDistanceToNow } from "date-fns"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, AlertCircle, Clock, MapPin } from "lucide-react"
+import { CheckCircle2, AlertCircle, Clock, MapPin, Eye } from "lucide-react"
+import { TaskDetailModal } from "@/components/modals/task-detail-modal"
+import { TaskCompletionModal } from "@/components/modals/task-completion-modal"
 
 interface TaskCardProps {
   task: Task
   onStatusChange?: (taskId: string, newStatus: Task["status"]) => void
+  onTaskUpdate?: () => void
 }
 
-export function TaskCard({ task, onStatusChange }: TaskCardProps) {
+export function TaskCard({ task, onStatusChange, onTaskUpdate }: TaskCardProps) {
   const plot = task.plotId ? getPlotById(task.plotId) : null
 
   const getStatusColor = () => {
@@ -68,7 +71,18 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
             {task.priority}
           </Badge>
         </div>
-        <h3 className="font-semibold text-base mt-2">{task.title}</h3>
+        <div className="flex items-start justify-between mt-2">
+          <h3 className="font-semibold text-base flex-1 pr-2">{task.title}</h3>
+          <TaskDetailModal
+            trigger={
+              <Button variant="ghost" size="sm" className="p-1 h-8 w-8 shrink-0">
+                <Eye className="h-4 w-4" />
+              </Button>
+            }
+            task={task}
+            onTaskUpdate={onTaskUpdate}
+          />
+        </div>
       </CardHeader>
       <CardContent className="pb-2">
         <p className="text-sm text-muted-foreground mb-3">{task.description}</p>
@@ -94,6 +108,7 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
           </div>
         </div>
       </CardContent>
+      {/* Action buttons for non-completed tasks */}
       {onStatusChange && task.status !== "Completed" && task.status !== "Cancelled" && (
         <CardFooter className="flex gap-2">
           {task.status === "Pending" && (
@@ -105,6 +120,21 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
             <CheckCircle2 className="mr-1 h-4 w-4" />
             Complete
           </Button>
+        </CardFooter>
+      )}
+      
+      {/* Completion time button for completed tasks */}
+      {task.status === "Completed" && (
+        <CardFooter className="flex gap-2">
+          <TaskCompletionModal
+            trigger={
+              <Button size="sm" variant="outline" className="flex-1">
+                <Clock className="mr-1 h-4 w-4" />
+                View Completion Time
+              </Button>
+            }
+            task={task}
+          />
         </CardFooter>
       )}
     </Card>

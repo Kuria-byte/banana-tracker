@@ -1,0 +1,112 @@
+# Comprehensive Web Application Codebase Analysis
+
+Act as a senior full-stack developer and technical architect. I need you to thoroughly analyze my web application codebase to understand its complete structure, purpose, and implementation. Please work through this analysis systematically, thinking step-by-step through each component.
+
+## Analysis Framework
+
+Please structure your analysis using the following comprehensive framework:
+
+### 1. **Project Overview & Business Context**
+- **Purpose & Mission**: What problem does this web application solve? What is its core value proposition?
+- **Target Users**: Who is the intended audience based on the features and UI patterns you observe?
+- **Business Model**: Based on the features, what appears to be the monetization or business strategy?
+- **Industry Context**: What industry or domain does this application serve?
+
+### 2. **Technical Architecture & Stack Analysis**
+- **Framework/Technology Stack**: Identify the primary technologies (React, Vue, Angular, Node.js, etc.)
+- **Architecture Pattern**: Is this a SPA, MPA, SSR, or hybrid approach?
+- **Build Tools & Configuration**: What build tools, bundlers, and configuration files are present?
+- **Dependencies Analysis**: 
+  - List major dependencies from package.json
+  - Identify key libraries and their purposes
+  - Note any custom or unusual dependency choices
+
+### 3. **File Structure & Organization**
+Provide a detailed breakdown of the codebase organization:
+- **Root-level structure**: Describe the main directories and their purposes
+- **Source code organization**: How is the /src or main code directory structured?
+- **Asset organization**: How are images, styles, and other assets organized?
+- **Configuration files**: List and explain key config files
+- **Documentation**: What documentation exists and where?
+
+Create a visual tree structure of the most important directories and files.
+
+### 4. **Navigation & Routing Analysis**
+- **Routing Strategy**: How is navigation implemented? (React Router, Vue Router, etc.)
+- **Route Structure**: Map out the main routes and their hierarchy
+- **Navigation Patterns**: Describe the main navigation components and UX patterns
+- **Authentication Flow**: How does protected routing work, if applicable?
+- **Deep Linking**: How does the app handle direct URL access?
+
+### 5. **Data Architecture & Management**
+- **State Management**: What state management solution is used? (Redux, Zustand, Context API, Vuex, etc.)
+- **Data Flow**: How does data flow through the application?
+- **API Integration**: 
+  - What APIs does the app consume?
+  - How are API calls structured and organized?
+  - What HTTP client is used?
+- **Data Models**: What are the main data entities and their relationships?
+- **Caching Strategy**: How is data cached, if at all?
+- **Error Handling**: How are API errors and data loading states handled?
+
+### 6. **Database & Backend Integration**
+- **Backend Services**: What backend services or APIs does this connect to?
+- **Authentication**: How is user authentication handled?
+- **Data Persistence**: How is data stored and retrieved?
+- **Real-time Features**: Are there any websocket or real-time data features?
+
+### 7. **UI/UX Architecture**
+- **Design System**: Is there a consistent design system or component library?
+- **Component Architecture**: How are UI components organized and structured?
+- **Styling Strategy**: CSS-in-JS, CSS modules, SCSS, Tailwind, or other approaches?
+- **Responsive Design**: How is mobile and tablet compatibility handled?
+- **Accessibility**: What accessibility features are implemented?
+- **User Experience Patterns**: What are the key UX patterns and user flows?
+
+### 8. **Performance & Optimization**
+- **Loading Strategies**: Code splitting, lazy loading, or other performance optimizations
+- **Bundle Analysis**: How is the code bundled and optimized?
+- **Caching**: What caching strategies are implemented?
+- **Performance Monitoring**: Any performance tracking or monitoring tools?
+
+### 9. **Development & Deployment**
+- **Development Workflow**: What scripts and development tools are configured?
+- **Testing Strategy**: What testing frameworks and approaches are used?
+- **Build Process**: How is the application built for production?
+- **Deployment**: What deployment strategy appears to be used?
+- **Environment Management**: How are different environments handled?
+
+### 10. **Security & Best Practices**
+- **Security Measures**: What security practices are implemented?
+- **Code Quality**: What linting, formatting, and code quality tools are used?
+- **Best Practices**: How well does the code follow modern development best practices?
+
+## Output Requirements
+
+Please provide your analysis in the following format:
+
+1. **Executive Summary** (2-3 paragraphs): A high-level overview of what this application does and how it's built
+
+2. **Detailed Analysis**: Work through each section above systematically
+
+3. **Architecture Diagram**: Describe the high-level architecture in text form (data flow, major components, external services)
+
+4. **Key Insights**: Highlight 5-7 most important observations about the codebase
+
+5. **Strengths & Opportunities**: 
+   - 3-5 things that are well-implemented
+   - 3-5 areas for potential improvement or optimization
+
+6. **Developer Onboarding Guide**: Based on your analysis, provide a brief guide for a new developer to get started with this codebase
+
+## Analysis Approach
+
+- **Be thorough but concise**: Provide detailed analysis without unnecessary verbosity
+- **Use evidence**: Reference specific files, code patterns, or configurations you observe
+- **Think like an architect**: Consider how different parts of the system work together
+- **Consider scalability**: Comment on how well the current architecture would scale
+- **Note assumptions**: If you make assumptions about functionality, clearly state them
+
+Start by examining the package.json, main entry points, and top-level directories to get oriented, then dive deeper into each area systematically.
+
+If certain files or directories are particularly important to understanding the application, please call them out specifically and explain why they're critical to the overall architecture.

@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TaskFormModal } from "@/components/modals/task-form-modal"
 import { getAllFarms } from "@/app/actions/farm-actions"
 import { getAllPlots } from "@/app/actions/plot-actions"
-import { updateTaskStatus } from "@/app/actions/task-actions"
+import { updateTaskStatus, getAllTasks } from "@/app/actions/task-actions"
+import type { Task } from "@/lib/mock-data"
 
 // Add custom scrollbar hiding styles
 const scrollbarHideStyles = `
@@ -37,7 +38,7 @@ export default function TasksClient({ tasks }: { tasks: Task[] }) {
         const farmsRes = await getAllFarms()
         setFarms(farmsRes.farms || [])
         const plotsRes = await getAllPlots()
-        setPlots(plotsRes.plots || [])
+        setPlots((plotsRes.plots || []).map((p: any) => ({ id: String(p.id), name: p.name, farmId: String(p.farmId) })))
       } catch (e) {
         setError("Failed to load farms or plots")
       } finally {
@@ -53,6 +54,7 @@ export default function TasksClient({ tasks }: { tasks: Task[] }) {
     priority: string
     type: string
     year: string
+    month: string
     farmId: string
     plotId: string
   }) => {
@@ -87,6 +89,14 @@ export default function TasksClient({ tasks }: { tasks: Task[] }) {
       })
     }
 
+    if (filters.month && filters.month !== "all") {
+      result = result.filter((task) => {
+        if (!task.dueDate) return false
+        const month = (new Date(task.dueDate).getMonth() + 1).toString().padStart(2, '0')
+        return month === filters.month
+      })
+    }
+
     if (filters.farmId && filters.farmId !== "all") {
       result = result.filter((task) => task.farmId === filters.farmId)
     }
@@ -114,6 +124,24 @@ export default function TasksClient({ tasks }: { tasks: Task[] }) {
       }
     } catch (e) {
       setError("Failed to update task status")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleTaskUpdate = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await getAllTasks()
+      if (res.success) {
+        setLocalTasks(res.tasks)
+        setFilteredTasks(res.tasks)
+      } else {
+        setError(res.error || "Failed to refresh tasks")
+      }
+    } catch (e) {
+      setError("Failed to refresh tasks")
     } finally {
       setLoading(false)
     }
@@ -150,7 +178,7 @@ export default function TasksClient({ tasks }: { tasks: Task[] }) {
       </div>
 
       <Tabs defaultValue="pending" className="mt-6">
-        <TabsList className="w-full flex whitespace-nowrap overflow-x-auto scrollbar-none pb-1 -mx-2 px-2 no-scrollbar">
+        <TabsList className="w-full flex whitespace-nowrap overflow-x-auto scrollbar-none pb-1 pl-48 pr-2 no-scrollbar">
           <TabsTrigger value="pending" className="flex items-center">
             <Clock className="mr-2 h-4 w-4" />
             Pending ({pendingTasks.length})
@@ -177,7 +205,7 @@ export default function TasksClient({ tasks }: { tasks: Task[] }) {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {pendingTasks.map((task) => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} />
+                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} onTaskUpdate={handleTaskUpdate} />
               ))}
             </div>
           )}
@@ -191,7 +219,7 @@ export default function TasksClient({ tasks }: { tasks: Task[] }) {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {inProgressTasks.map((task) => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} />
+                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} onTaskUpdate={handleTaskUpdate} />
               ))}
             </div>
           )}
@@ -205,7 +233,7 @@ export default function TasksClient({ tasks }: { tasks: Task[] }) {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {completedTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
+                <TaskCard key={task.id} task={task} onTaskUpdate={handleTaskUpdate} />
               ))}
             </div>
           )}
@@ -219,7 +247,7 @@ export default function TasksClient({ tasks }: { tasks: Task[] }) {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredTasks.map((task) => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} />
+                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} onTaskUpdate={handleTaskUpdate} />
               ))}
             </div>
           )}

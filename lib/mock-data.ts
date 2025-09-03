@@ -115,6 +115,7 @@ export interface Task {
   assigneeEmail?: string;
   plotName?: string; // Optional plot name for display purposes
   createdAt?: string;
+  updatedAt?: string;
 }
 
 // Harvest interface
