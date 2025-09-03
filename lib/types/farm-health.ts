@@ -48,11 +48,11 @@ export interface MonthlyHealthSummary {
   }[]
 }
 
-// Thresholds for determining health status
+// Thresholds for determining health status (per CLAUDE.md business logic)
 export const HEALTH_STATUS_THRESHOLDS = {
-  Good: 80, // 80% and above
-  Average: 60, // 60-79%
-  Poor: 0, // Below 60%
+  Good: 70, // 70% and above
+  Average: 50, // 50-69%
+  Poor: 0, // Below 50%
 }
 
 // Function to determine health status based on score percentage
@@ -60,7 +60,7 @@ export function determineHealthStatus(scorePercentage: number): HealthStatus {
   if (scorePercentage >= HEALTH_STATUS_THRESHOLDS.Good) {
     return "Good"
   } else if (scorePercentage >= HEALTH_STATUS_THRESHOLDS.Average) {
-    return "Poor"
+    return "Average"
   } else {
     return "Poor"
   }

@@ -366,9 +366,11 @@ export async function getFarmsHealthStatusFromPlots() {
         .orderBy(desc(farmInspections.inspectionDate))
         .limit(1)
       if (latestInspection) {
-        // Use your determineHealthStatus function
+        // Calculate percentage: score / max possible score (18 points)
         const score = latestInspection.score
-        plotStatuses.push(determineHealthStatus(score))
+        const maxPossibleScore = 18 // Total points from CLAUDE.md: 11 criteria = 18 points
+        const scorePercentage = (score / maxPossibleScore) * 100
+        plotStatuses.push(determineHealthStatus(scorePercentage))
       }
     }
     // 4. Aggregate plot statuses to farm status
