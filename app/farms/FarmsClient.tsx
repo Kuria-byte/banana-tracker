@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 
 import { FarmFilter } from "@/components/farms/farm-filter"
 import { Button } from "@/components/ui/button"
@@ -55,6 +56,7 @@ function formatDate(dateString: string) {
 }
 
 export default function FarmsClient({ farms, users }: { farms: any[], users: any[] }) {
+  const router = useRouter()
   const [filteredFarms, setFilteredFarms] = useState(farms)
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'map'>('grid')
   const [sortBy, setSortBy] = useState<'name' | 'health' | 'area' | 'established'>('name')
@@ -78,6 +80,7 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
     notAssessed: 0,
     total: 0
   })
+  const [showAllIssues, setShowAllIssues] = useState(false)
 
   // Fetch farm health and attention required on mount
   useEffect(() => {
@@ -312,8 +315,12 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
                 </p>
                 {attentionIssues.length > 0 ? (
                   <div className="mt-4 space-y-3">
-                    {attentionIssues.slice(0, 3).map((issue, idx) => (
-                      <div key={idx} className="flex flex-col gap-1 p-2 border rounded-md">
+                    {(showAllIssues ? attentionIssues : attentionIssues.slice(0, 3)).map((issue, idx) => (
+                      <div 
+                        key={idx} 
+                        className="flex flex-col gap-1 p-2 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                        onClick={() => router.push(`/farms/${issue.farmId}/health`)}
+                      >
                         <div className="flex items-center gap-2">
                           <AlertTriangle className="h-4 w-4 text-red-500" />
                           <span className="font-medium">{issue.farmName}</span>
@@ -329,8 +336,28 @@ export default function FarmsClient({ farms, users }: { farms: any[], users: any
                       </div>
                     ))}
                     {attentionIssues.length > 3 && (
-                      <div className="text-center text-xs text-muted-foreground">
-                        +{attentionIssues.length - 3} more issues
+                      <div className="flex justify-center mt-3">
+                        {!showAllIssues ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-muted-foreground hover:text-foreground h-auto p-2"
+                            onClick={() => setShowAllIssues(true)}
+                          >
+                            +{attentionIssues.length - 3} more issues
+                            <ChevronDown className="h-3 w-3 ml-1" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-muted-foreground hover:text-foreground h-auto p-2"
+                            onClick={() => setShowAllIssues(false)}
+                          >
+                            Show less
+                            <ChevronDown className="h-3 w-3 ml-1 rotate-180" />
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
